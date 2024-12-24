@@ -51,7 +51,7 @@ members = [
 version = "0.1.0"
 edition = "2021"
 authors = ["Brad Edwards <brad@keplerops.com>"]
-license = "MIT"
+license = "MIT OR Apache-2.0"
 repository = "https://github.com/atomiklabs/blocks"
 resolver = "2"
 
