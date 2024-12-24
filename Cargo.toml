@@ -1,0 +1,17 @@
+[workspace]
+members = [
+    "shared/blocks-core",
+    "shared/blocks-primitives",
+    "shared/blocks-utils",
+    "shared/blocks-tests"
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = []
+license = "MIT"
+repository = "https://github.com/atomiklabs/blocks"
+
+[workspace.dependencies]
+# Common dependencies will be added here as needed
