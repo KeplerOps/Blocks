@@ -1,0 +1,9 @@
+[package]
+name = "blocks-ml-classic"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
