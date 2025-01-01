@@ -397,4 +397,3 @@ mod tests {
         assert_eq!(arr, expected);
     }
 }
-}
