@@ -132,30 +132,27 @@ where
 }
 
 /// Iterator adapter for merge sort
-pub struct MergeSortIterator<T, I>
+pub struct MergeSortIterator<T>
 where
-    I: Iterator<Item = T>,
     T: Ord + Clone + Debug,
 {
     inner: Vec<T>,
     idx: usize,
 }
 
-impl<T, I> From<I> for MergeSortIterator<T, I>
+impl<T> MergeSortIterator<T>
 where
-    I: Iterator<Item = T>,
     T: Ord + Clone + Debug,
 {
-    fn from(iter: I) -> Self {
-        let mut inner: Vec<T> = iter.collect();
+    pub fn new<I: IntoIterator<Item = T>>(iter: I) -> Self {
+        let mut inner: Vec<T> = iter.into_iter().collect();
         sort(&mut inner);
         Self { inner, idx: 0 }
     }
 }
 
-impl<T, I> Iterator for MergeSortIterator<T, I>
+impl<T> Iterator for MergeSortIterator<T>
 where
-    I: Iterator<Item = T>,
     T: Ord + Clone + Debug,
 {
     type Item = T;
@@ -351,15 +348,15 @@ mod tests {
     #[test]
     fn test_iterator() {
         let arr = vec![5, 2, 8, 1, 9, 3, 7, 4, 6];
-        let sorted: Vec<_> = MergeSortIterator::from(arr.into_iter()).collect();
-        let mut expected = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let sorted: Vec<_> = MergeSortIterator::new(arr).collect();
+        let expected = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
         assert_eq!(sorted, expected);
     }
 
     #[test]
     fn test_iterator_size_hint() {
         let arr = vec![5, 2, 8, 1, 9];
-        let iter = MergeSortIterator::from(arr.into_iter());
+        let iter = MergeSortIterator::new(arr);
         assert_eq!(iter.size_hint(), (5, Some(5)));
     }
 
