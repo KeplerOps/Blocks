@@ -29,7 +29,15 @@ pub fn sort<T>(slice: &mut [T])
 where
     T: Ord + Clone + Debug,
 {
-    // Implementation will be added later
+    for i in 1..slice.len() {
+        let mut j = i;
+        // Move elements of slice[0..i] that are greater than key
+        // to one position ahead of their current position
+        while j > 0 && slice[j - 1] > slice[j] {
+            slice.swap(j - 1, j);
+            j -= 1;
+        }
+    }
 }
 
 #[cfg(test)]
