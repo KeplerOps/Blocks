@@ -1,3 +1,18 @@
+//! Mergesort implementation with parallel processing support.
+//! 
+//! This module provides a configurable mergesort implementation that can:
+//! - Use insertion sort for small arrays
+//! - Process large arrays in parallel using rayon
+//! - Handle generic types that implement Ord + Clone
+//! 
+//! # Safety
+//! This implementation uses unsafe code in the following ways:
+//! - Uses `split_at_mut` for parallel processing (safe interface to unsafe code)
+//! - Uses rayon's parallel execution primitives (safe interface to unsafe code)
+//! 
+//! All unsafe operations are properly encapsulated and safe when used with types
+//! that implement the required traits (Send + Sync for parallel execution).
+
 use std::fmt::{Debug, Display};
 use std::error::Error;
 use rayon;
@@ -208,6 +223,15 @@ impl MergeSortBuilder {
         Ok(())
     }
 
+    /// Parallel sorting implementation that uses rayon for parallel execution.
+    /// 
+    /// # Safety
+    /// This function uses unsafe code in the following ways:
+    /// - Uses `split_at_mut` which is safe but relies on unsafe code internally
+    /// - Uses rayon's parallel execution which involves unsafe code for thread management
+    /// 
+    /// These operations are safe when the type T implements Send + Sync, which is
+    /// enforced by the trait bounds.
     fn sort_parallel<T>(
         &self,
         slice: &mut [T],
@@ -232,30 +256,33 @@ impl MergeSortBuilder {
             return Ok(());
         }
 
-        let mid = slice.len() / 2;
-
-        // Sort halves in parallel
+        // Use parallel execution for large enough chunks
         if slice.len() >= self.parallel_threshold {
-            // Create a clone of the slice to allow parallel processing
-            let mut temp = slice.to_vec();
-            let (left, right) = temp.split_at_mut(mid);
+            let mid = slice.len() / 2;
 
-            // Sort halves in parallel
+            // SAFETY: split_at_mut is safe but uses unsafe code internally to create
+            // two mutable references to different parts of the slice. This is safe
+            // because the ranges are guaranteed not to overlap.
+            let (left, right) = slice.split_at_mut(mid);
+
+            // SAFETY: rayon's join uses unsafe code internally for thread management
+            // and parallel execution. This is safe because T: Send + Sync and we're
+            // operating on non-overlapping mutable slices.
             rayon::join(
                 || self.sort_sequential(left, aux, depth + 1),
                 || self.sort_sequential(right, aux, depth + 1),
             );
 
-            // Copy back the sorted results
-            slice.copy_from_slice(&temp);
+            // Merge the sorted halves
+            merge(slice, mid, aux);
         } else {
-            // Fall back to sequential for smaller chunks
+            // Sequential sort for smaller chunks
+            let mid = slice.len() / 2;
             self.sort_sequential(&mut slice[..mid], aux, depth + 1)?;
             self.sort_sequential(&mut slice[mid..], aux, depth + 1)?;
+            merge(slice, mid, aux);
         }
 
-        // Merge the sorted halves
-        merge(slice, mid, aux);
         Ok(())
     }
 }
