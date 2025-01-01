@@ -6,6 +6,7 @@
 //! - Handle generic types that implement Ord + Clone
 //! 
 //! # Safety
+//! 
 //! This implementation uses unsafe code in the following ways:
 //! - Uses `split_at_mut` for parallel processing (safe interface to unsafe code)
 //! - Uses rayon's parallel execution primitives (safe interface to unsafe code)
@@ -17,7 +18,7 @@ use std::fmt::Debug;
 use rayon;
 
 use crate::error::{Result, SortError};
-use crate::memory::{MergeBuffer, SortArena};
+use crate::memory::MergeBuffer;
 
 /// Builder for configuring and executing merge sort operations.
 /// 
@@ -144,7 +145,7 @@ impl MergeSortBuilder {
     /// - Parallel execution fails
     pub fn sort<T>(&self, slice: &mut [T]) -> Result<()>
     where
-        T: Ord + Clone + Debug + Send + Sync,
+        T: Ord + Clone + Debug + Send + Sync + 'static,
     {
         if slice.len() <= 1 {
             return Ok(());
@@ -169,7 +170,7 @@ impl MergeSortBuilder {
     fn sort_sequential<T>(
         &self,
         slice: &mut [T],
-        aux: &mut Vec<T>,
+        aux: &mut MergeBuffer<T>,
         depth: usize,
     ) -> Result<()>
     where
@@ -203,7 +204,7 @@ impl MergeSortBuilder {
     fn sort_parallel<T>(
         &self,
         slice: &mut [T],
-        aux: &mut Vec<T>,
+        aux: &mut MergeBuffer<T>,
         depth: usize,
     ) -> Result<()>
     where
@@ -225,9 +226,10 @@ impl MergeSortBuilder {
 
         let mid = slice.len() / 2;
 
-        // Create auxiliary buffers for parallel sorting
-        let mut left_aux = MergeBuffer::new(mid, &slice[0])?;
-        let mut right_aux = MergeBuffer::new(slice.len() - mid, &slice[0])?;
+        // Create auxiliary buffers before splitting the slice
+        let template = slice[0].clone();
+        let mut left_aux = MergeBuffer::new(mid, &template)?;
+        let mut right_aux = MergeBuffer::new(slice.len() - mid, &template)?;
 
         // SAFETY: split_at_mut is safe but uses unsafe code internally to create
         // two mutable references to different parts of the slice. This is safe
@@ -328,7 +330,7 @@ mod tests {
     fn test_empty_slice() {
         let mut arr: Vec<i32> = vec![];
         sort(&mut arr).unwrap();
-        assert_eq!(arr, vec![]);
+        assert_eq!(arr, Vec::<i32>::new());
     }
 
     #[test]
@@ -368,11 +370,6 @@ mod tests {
         let mut arr: Vec<i32> = (0..size).rev().collect();
         let mut expected = arr.clone();
         expected.sort();
-
-        // Count parallel executions using thread-local storage
-        thread_local! {
-            static THREAD_COUNT: AtomicUsize = AtomicUsize::new(0);
-        }
 
         // Initialize rayon with a custom thread pool for this test
         let pool = rayon::ThreadPoolBuilder::new()

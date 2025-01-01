@@ -1,4 +1,6 @@
 use std::fmt::Display;
+use std::error::Error;
+use std::collections::TryReserveError;
 use thiserror::Error;
 
 /// Errors that can occur during sorting operations.
@@ -18,9 +20,9 @@ pub enum SortError {
     AllocationFailed {
         /// The reason for the allocation failure
         reason: String,
-        /// The number of bytes that failed to allocate
+        /// The source error if available
         #[source]
-        source: Option<std::alloc::AllocError>,
+        source: Option<TryReserveError>,
     },
 
     /// A parallel execution task failed.
@@ -50,7 +52,7 @@ impl SortError {
     }
 
     /// Creates a new AllocationFailed error.
-    pub(crate) fn allocation_failed(reason: impl Display, source: Option<std::alloc::AllocError>) -> Self {
+    pub(crate) fn allocation_failed(reason: impl Display, source: Option<TryReserveError>) -> Self {
         Self::AllocationFailed {
             reason: reason.to_string(),
             source,
@@ -100,13 +102,20 @@ mod tests {
 
     #[test]
     fn test_error_sources() {
-        let err = SortError::allocation_failed(
-            "failed to allocate",
-            Some(std::alloc::AllocError),
-        );
+        let mut v: Vec<i32> = Vec::new();
+        let err = v.try_reserve(usize::MAX).unwrap_err();
+        let err = SortError::allocation_failed("failed to allocate", Some(err));
         assert!(err.source().is_some());
 
         let err = SortError::recursion_limit_exceeded(10, 5);
         assert!(err.source().is_none());
+    }
+
+    #[test]
+    fn test_error_display() {
+        let mut v: Vec<i32> = Vec::new();
+        let reserve_err = v.try_reserve(usize::MAX).unwrap_err();
+        let err = SortError::allocation_failed("failed to allocate", Some(reserve_err));
+        assert!(err.to_string().contains("failed to allocate"));
     }
 }
