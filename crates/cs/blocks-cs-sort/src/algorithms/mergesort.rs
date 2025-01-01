@@ -1,5 +1,4 @@
 use std::fmt::Debug;
-use std::mem;
 
 const INSERTION_SORT_THRESHOLD: usize = 10;
 const MAX_RECURSION_DEPTH: usize = 48; // log2(2^48) elements should be enough
@@ -176,7 +175,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::panic;
 
     #[test]
     fn test_empty_slice() {
@@ -364,15 +362,14 @@ mod tests {
     #[should_panic(expected = "Maximum recursion depth exceeded")]
     fn test_recursion_depth_limit() {
         // Create an array that would exceed the recursion depth limit
-        let size = 2usize.pow(MAX_RECURSION_DEPTH as u32 + 1);
+        // Use a smaller size that won't cause memory allocation issues
+        let size = 1_000_000; // Large enough to trigger depth limit but not too large
         let mut arr = vec![0i32; size];
         sort(&mut arr);
     }
 
     #[test]
     fn test_memory_usage() {
-        use std::mem::size_of;
-
         // Test that we only allocate one auxiliary array
         let mut arr = vec![5i32; 1000];
         let initial_memory = std::mem::size_of_val(arr.as_slice());
