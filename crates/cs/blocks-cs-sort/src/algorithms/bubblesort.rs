@@ -22,7 +22,36 @@ pub fn sort<T>(slice: &mut [T])
 where
     T: Ord + Clone + Debug,
 {
-    // Implementation will be added later
+    if slice.len() <= 1 {
+        return;
+    }
+
+    let len = slice.len();
+    let mut swapped;
+
+    // Optimization: Keep track of last swap position
+    let mut new_len = len;
+
+    loop {
+        swapped = false;
+        let mut last_swap = 0;
+
+        for i in 0..new_len - 1 {
+            if slice[i] > slice[i + 1] {
+                slice.swap(i, i + 1);
+                swapped = true;
+                last_swap = i + 1;
+            }
+        }
+
+        // If no swapping occurred, array is sorted
+        if !swapped {
+            break;
+        }
+
+        // Update new_len to last swap position
+        new_len = last_swap;
+    }
 }
 
 #[cfg(test)]
