@@ -260,14 +260,15 @@ impl MergeSortBuilder {
         if slice.len() >= self.parallel_threshold {
             let mid = slice.len() / 2;
 
+            // Create auxiliary arrays before splitting the slice
+            let template = slice[0].clone();
+            let mut left_aux = vec![template.clone(); mid];
+            let mut right_aux = vec![template; slice.len() - mid];
+
             // SAFETY: split_at_mut is safe but uses unsafe code internally to create
             // two mutable references to different parts of the slice. This is safe
             // because the ranges are guaranteed not to overlap.
             let (left, right) = slice.split_at_mut(mid);
-
-            // Create separate auxiliary arrays for parallel tasks
-            let mut left_aux = vec![slice[0].clone(); left.len()];
-            let mut right_aux = vec![slice[0].clone(); right.len()];
 
             // SAFETY: rayon's join uses unsafe code internally for thread management
             // and parallel execution. This is safe because T: Send + Sync and we're
