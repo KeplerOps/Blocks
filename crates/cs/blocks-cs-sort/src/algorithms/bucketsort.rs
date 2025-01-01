@@ -32,18 +32,56 @@ use std::fmt::Debug;
 /// - Requires additional space
 /// - Input must be in a known range (typically [0, 1))
 pub fn sort(slice: &mut [f64]) {
-    // Implementation will be added later
+    if slice.len() <= 1 {
+        return;
+    }
+
+    let n = slice.len();
+    
+    // Create n empty buckets
+    let mut buckets: Vec<Vec<f64>> = vec![Vec::new(); n];
+    
+    // Put array elements in different buckets
+    for &num in slice.iter() {
+        let idx = get_bucket_index(num, n);
+        buckets[idx].push(num);
+    }
+    
+    // Sort individual buckets
+    for bucket in buckets.iter_mut() {
+        insertion_sort(bucket);
+    }
+    
+    // Concatenate all buckets into slice
+    let mut index = 0;
+    for bucket in buckets.iter() {
+        for &value in bucket {
+            slice[index] = value;
+            index += 1;
+        }
+    }
 }
 
 /// Sorts a bucket using insertion sort
 fn insertion_sort(bucket: &mut Vec<f64>) {
-    // Implementation will be added later
+    for i in 1..bucket.len() {
+        let key = bucket[i];
+        let mut j = i;
+        
+        while j > 0 && bucket[j - 1] > key {
+            bucket[j] = bucket[j - 1];
+            j -= 1;
+        }
+        
+        bucket[j] = key;
+    }
 }
 
 /// Determines the appropriate bucket index for a value
 fn get_bucket_index(value: f64, num_buckets: usize) -> usize {
-    // Implementation will be added later
-    0
+    let bucket_idx = (value * num_buckets as f64) as usize;
+    // Handle edge case where value = 1.0
+    bucket_idx.min(num_buckets - 1)
 }
 
 #[cfg(test)]
