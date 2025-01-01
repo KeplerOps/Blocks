@@ -236,9 +236,14 @@ impl MergeSortBuilder {
 
         // Sort halves in parallel
         if slice.len() >= self.parallel_threshold {
+            // Create thread-local auxiliary arrays
+            let mut left_aux = vec![slice[0].clone(); mid];
+            let mut right_aux = vec![slice[0].clone(); slice.len() - mid];
+
+            // Sort halves in parallel with their own auxiliary arrays
             rayon::join(
-                || self.sort_parallel(&mut slice[..mid], aux, depth + 1),
-                || self.sort_parallel(&mut slice[mid..], aux, depth + 1),
+                || self.sort_parallel(&mut slice[..mid], &mut left_aux, depth + 1),
+                || self.sort_parallel(&mut slice[mid..], &mut right_aux, depth + 1),
             );
         } else {
             // Fall back to sequential for smaller chunks
@@ -258,7 +263,7 @@ impl MergeSortBuilder {
 /// For more control, use `MergeSortBuilder` directly.
 pub fn sort<T>(slice: &mut [T]) -> Result<(), SortError>
 where
-    T: Ord + Clone + Debug,
+    T: Ord + Clone + Debug + Send + Sync,
 {
     MergeSortBuilder::new().sort(slice)
 }
