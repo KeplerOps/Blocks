@@ -7,3 +7,13 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+
+[dev-dependencies]
+quickcheck = "1.0"
+quickcheck_macros = "1.0"
+criterion = "0.5"
+rand = "0.8"
+
+[[bench]]
+name = "search_benchmark"
+harness = false
