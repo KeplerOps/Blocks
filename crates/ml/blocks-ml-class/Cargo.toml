@@ -1,0 +1,17 @@
+[package]
+name = "blocks-ml-class"
+version = "0.1.0"
+edition = "2021"
+description = "Classical Machine Learning Algorithms Implementation"
+license = "MIT"
+
+[dependencies]
+ndarray = "0.15"
+rand = "0.8"
+thiserror = "1.0"
+num-traits = "0.2"
+
+[dev-dependencies]
+approx = "0.5"
+criterion = "0.5"
+rand_chacha = "0.3"
