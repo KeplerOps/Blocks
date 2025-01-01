@@ -30,7 +30,24 @@ pub fn sort<T>(slice: &mut [T])
 where
     T: Ord + Clone + Debug,
 {
-    // Implementation will be added later
+    let len = slice.len();
+    
+    // One by one move boundary of unsorted subarray
+    for i in 0..len {
+        // Find the minimum element in unsorted array
+        let mut min_idx = i;
+        for j in (i + 1)..len {
+            if slice[j] < slice[min_idx] {
+                min_idx = j;
+            }
+        }
+
+        // Swap the found minimum element with the first element
+        // Only if we found a smaller element
+        if min_idx != i {
+            slice.swap(i, min_idx);
+        }
+    }
 }
 
 #[cfg(test)]
