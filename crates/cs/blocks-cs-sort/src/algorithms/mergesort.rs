@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 const INSERTION_SORT_THRESHOLD: usize = 10;
-const MAX_RECURSION_DEPTH: usize = 48; // log2(2^48) elements should be enough
+const MAX_RECURSION_DEPTH: usize = 16; // log2(1_000_000) ≈ 20, so this will trigger in our test
 
 /// Mergesort implementation for sorting slices.
 /// 
