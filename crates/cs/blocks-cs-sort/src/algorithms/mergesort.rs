@@ -22,7 +22,15 @@ pub fn sort<T>(slice: &mut [T])
 where
     T: Ord + Clone + Debug,
 {
-    // Implementation will be added later
+    let len = slice.len();
+    if len <= 1 {
+        return;
+    }
+
+    let mid = len / 2;
+    sort(&mut slice[..mid]);
+    sort(&mut slice[mid..]);
+    merge(slice, mid);
 }
 
 /// Internal function that merges two sorted halves of a slice
@@ -30,7 +38,38 @@ fn merge<T>(slice: &mut [T], mid: usize)
 where
     T: Ord + Clone + Debug,
 {
-    // Implementation will be added later
+    let left = slice[..mid].to_vec();
+    let right = slice[mid..].to_vec();
+
+    let mut i = 0; // Index for left array
+    let mut j = 0; // Index for right array
+    let mut k = 0; // Index for merged array
+
+    // Compare and merge elements from left and right arrays
+    while i < left.len() && j < right.len() {
+        if left[i] <= right[j] {
+            slice[k] = left[i].clone();
+            i += 1;
+        } else {
+            slice[k] = right[j].clone();
+            j += 1;
+        }
+        k += 1;
+    }
+
+    // Copy remaining elements from left array, if any
+    while i < left.len() {
+        slice[k] = left[i].clone();
+        i += 1;
+        k += 1;
+    }
+
+    // Copy remaining elements from right array, if any
+    while j < right.len() {
+        slice[k] = right[j].clone();
+        j += 1;
+        k += 1;
+    }
 }
 
 #[cfg(test)]
