@@ -23,7 +23,18 @@ pub fn sort<T>(slice: &mut [T])
 where
     T: Ord + Clone + Debug,
 {
-    // Implementation will be added later
+    if slice.len() <= 1 {
+        return;
+    }
+
+    // Build max heap
+    build_max_heap(slice);
+
+    // Extract elements from heap one by one
+    for i in (1..slice.len()).rev() {
+        slice.swap(0, i);
+        heapify(slice, i, 0);
+    }
 }
 
 /// Builds a max heap from an arbitrary array
@@ -31,7 +42,11 @@ fn build_max_heap<T>(slice: &mut [T])
 where
     T: Ord + Clone + Debug,
 {
-    // Implementation will be added later
+    let len = slice.len();
+    // Start from last non-leaf node and heapify all nodes
+    for i in (0..len/2).rev() {
+        heapify(slice, len, i);
+    }
 }
 
 /// Maintains the max heap property for a subtree rooted at index i
@@ -39,7 +54,26 @@ fn heapify<T>(slice: &mut [T], len: usize, root: usize)
 where
     T: Ord + Clone + Debug,
 {
-    // Implementation will be added later
+    let mut largest = root;
+    let left = 2 * root + 1;
+    let right = 2 * root + 2;
+
+    // Compare with left child
+    if left < len && slice[left] > slice[largest] {
+        largest = left;
+    }
+
+    // Compare with right child
+    if right < len && slice[right] > slice[largest] {
+        largest = right;
+    }
+
+    // If largest is not root
+    if largest != root {
+        slice.swap(root, largest);
+        // Recursively heapify the affected sub-tree
+        heapify(slice, len, largest);
+    }
 }
 
 #[cfg(test)]
