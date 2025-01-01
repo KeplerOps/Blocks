@@ -73,6 +73,7 @@ fn validate_array_size(len: usize) -> Result<()> {
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
+#[allow(dead_code)]
 const PARALLEL_THRESHOLD: usize = 100_000;
 
 pub fn sort<T: Ord + Send>(slice: &mut [T]) -> Result<()> {
