@@ -223,13 +223,44 @@ mod tests {
 }
 
 /// A buffer for merge operations that handles allocation safely.
+/// 
+/// This type provides optimized implementations for different types:
+/// - Copy types use direct memory copying
+/// - Primitive types can use SIMD operations
+/// - Other types fall back to clone-based initialization
+#[derive(Debug)]
 pub(crate) struct MergeBuffer<T> {
     data: Vec<T>,
 }
 
 impl<T: Clone> MergeBuffer<T> {
     /// Creates a new merge buffer with the given capacity and template value.
+    /// 
+    /// # Errors
+    /// 
+    /// Returns an error if:
+    /// - Capacity would exceed isize::MAX bytes
+    /// - Memory allocation fails
     pub fn new(capacity: usize, template: &T) -> Result<Self> {
+        // Check capacity
+        if capacity > 0 {
+            // Ensure we don't exceed isize::MAX bytes
+            let size = std::mem::size_of::<T>()
+                .checked_mul(capacity)
+                .ok_or_else(|| SortError::allocation_failed(
+                    "Buffer size overflow",
+                    None
+                ))?;
+
+            if size > isize::MAX as usize {
+                return Err(SortError::allocation_failed(
+                    format!("Total size {} exceeds isize::MAX", size),
+                    None
+                ));
+            }
+        }
+
+        // Allocate and initialize
         let mut data = Vec::new();
         data.try_reserve_exact(capacity)
             .map_err(|e| SortError::allocation_failed(
@@ -237,20 +268,171 @@ impl<T: Clone> MergeBuffer<T> {
                 Some(e)
             ))?;
 
-        // Initialize buffer with clones of the template value
-        data.extend(std::iter::repeat_with(|| template.clone()).take(capacity));
+        // Initialize buffer
+        if capacity > 0 {
+            Self::initialize_buffer(&mut data, capacity, template)?;
+        }
 
         Ok(Self { data })
     }
 
     /// Gets a mutable slice of the buffer.
+    #[inline]
     pub fn as_mut_slice(&mut self) -> &mut [T] {
         self.data.as_mut_slice()
     }
 
     /// Gets a slice of the buffer.
+    #[inline]
     pub fn as_slice(&self) -> &[T] {
         self.data.as_slice()
+    }
+
+    /// Returns the capacity of the buffer.
+    #[inline]
+    pub fn capacity(&self) -> usize {
+        self.data.capacity()
+    }
+
+    /// Returns true if the buffer is empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
+    }
+
+    /// Initialize the buffer with the template value.
+    #[inline]
+    fn initialize_buffer(data: &mut Vec<T>, capacity: usize, template: &T) -> Result<()> {
+        data.extend(std::iter::repeat_with(|| template.clone()).take(capacity));
+        Ok(())
+    }
+}
+
+// Specialization for Copy types
+impl<T: Copy> MergeBuffer<T> {
+    /// Initialize the buffer using memcpy for Copy types.
+    #[inline]
+    fn initialize_buffer(data: &mut Vec<T>, capacity: usize, template: &T) -> Result<()> {
+        // SAFETY: we've already allocated enough space
+        unsafe {
+            data.set_len(capacity);
+        }
+        data.fill(*template);
+        Ok(())
+    }
+}
+
+// SIMD optimization for primitive types
+#[cfg(target_arch = "x86_64")]
+impl MergeBuffer<i32> {
+    /// Initialize the buffer using SIMD operations for i32.
+    #[inline]
+    fn initialize_buffer(data: &mut Vec<i32>, capacity: usize, template: &i32) -> Result<()> {
+        use std::arch::x86_64::*;
+        
+        // SAFETY: we've already allocated enough space
+        unsafe {
+            data.set_len(capacity);
+            
+            if is_x86_feature_detected!("avx2") {
+                let value = _mm256_set1_epi32(*template);
+                let ptr = data.as_mut_ptr() as *mut __m256i;
+                let chunks = capacity / 8;
+                
+                for i in 0..chunks {
+                    _mm256_store_si256(ptr.add(i), value);
+                }
+                
+                // Fill remaining elements
+                let remaining = capacity % 8;
+                if remaining > 0 {
+                    let start = chunks * 8;
+                    data[start..].fill(*template);
+                }
+            } else {
+                // Fall back to regular fill
+                data.fill(*template);
+            }
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod buffer_tests {
+    use super::*;
+
+    #[test]
+    fn test_buffer_allocation() {
+        let buffer = MergeBuffer::new(1000, &42i32).unwrap();
+        assert_eq!(buffer.capacity(), 1000);
+        assert!(!buffer.is_empty());
+        assert!(buffer.as_slice().iter().all(|&x| x == 42));
+    }
+
+    #[test]
+    fn test_buffer_zero_capacity() {
+        let buffer = MergeBuffer::<i32>::new(0, &42).unwrap();
+        assert_eq!(buffer.capacity(), 0);
+        assert!(buffer.is_empty());
+    }
+
+    #[test]
+    fn test_buffer_huge_allocation() {
+        let result = MergeBuffer::<i32>::new(usize::MAX / 4, &42);
+        assert!(result.is_err());
+        match result {
+            Err(SortError::AllocationFailed { reason, .. }) => {
+                assert!(reason.contains("overflow") || 
+                       reason.contains("exceeds isize::MAX"));
+            }
+            _ => panic!("Expected allocation failure"),
+        }
+    }
+
+    #[test]
+    fn test_buffer_copy_type() {
+        let start = std::time::Instant::now();
+        let buffer = MergeBuffer::new(1_000_000, &42i32).unwrap();
+        let duration = start.elapsed();
+        
+        // Verify correctness
+        assert_eq!(buffer.capacity(), 1_000_000);
+        assert!(buffer.as_slice().iter().all(|&x| x == 42));
+        
+        // Should be fast due to memcpy
+        assert!(duration.as_micros() < 1000, "Copy initialization took too long");
+    }
+
+    #[test]
+    fn test_buffer_clone_type() {
+        #[derive(Debug, Clone, PartialEq)]
+        struct NonCopy(i32);
+
+        let template = NonCopy(42);
+        let buffer = MergeBuffer::new(100, &template).unwrap();
+        
+        assert_eq!(buffer.capacity(), 100);
+        assert!(buffer.as_slice().iter().all(|x| x == &template));
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn test_buffer_simd() {
+        if !is_x86_feature_detected!("avx2") {
+            return; // Skip test if AVX2 not available
+        }
+
+        let start = std::time::Instant::now();
+        let buffer = MergeBuffer::new(1_000_000, &42i32).unwrap();
+        let duration = start.elapsed();
+        
+        // Verify correctness
+        assert_eq!(buffer.capacity(), 1_000_000);
+        assert!(buffer.as_slice().iter().all(|&x| x == 42));
+        
+        // Should be very fast with SIMD
+        assert!(duration.as_micros() < 500, "SIMD initialization took too long");
     }
 }
 
