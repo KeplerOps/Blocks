@@ -31,24 +31,60 @@ use std::fmt::Debug;
 /// - Performance depends on number of digits and base
 /// - Uses extra space
 pub fn sort(slice: &mut [u32]) {
-    // Implementation will be added later
+    if slice.len() <= 1 {
+        return;
+    }
+
+    // Find the maximum number to know number of digits
+    let max = find_max(slice);
+    
+    // Do counting sort for every digit
+    let mut exp = 1;
+    while max / exp > 0 {
+        counting_sort_by_digit(slice, exp);
+        exp *= 10;
+    }
 }
 
 /// Performs counting sort on a specific digit (0-9)
 fn counting_sort_by_digit(slice: &mut [u32], exp: u32) {
-    // Implementation will be added later
+    let len = slice.len();
+    
+    // Create output array and count array
+    let mut output = vec![0; len];
+    let mut count = vec![0; 10]; // 10 possible digits (0-9)
+    
+    // Store count of occurrences of current digit
+    for &num in slice.iter() {
+        count[get_digit(num, exp)] += 1;
+    }
+    
+    // Change count[i] so that it contains actual
+    // position of this digit in output[]
+    for i in 1..10 {
+        count[i] += count[i - 1];
+    }
+    
+    // Build the output array
+    // Moving from end to start maintains stability
+    for &num in slice.iter().rev() {
+        let digit = get_digit(num, exp);
+        count[digit] -= 1;
+        output[count[digit]] = num;
+    }
+    
+    // Copy the output array to slice[]
+    slice.copy_from_slice(&output);
 }
 
 /// Gets the digit at a specific place value (exp)
 fn get_digit(num: u32, exp: u32) -> usize {
-    // Implementation will be added later
-    0
+    ((num / exp) % 10) as usize
 }
 
 /// Finds the maximum value in the slice
 fn find_max(slice: &[u32]) -> u32 {
-    // Implementation will be added later
-    0
+    slice.iter().max().copied().unwrap_or(0)
 }
 
 #[cfg(test)]
