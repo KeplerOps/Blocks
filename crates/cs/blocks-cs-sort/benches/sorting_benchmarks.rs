@@ -1,5 +1,5 @@
 use blocks_cs_sort::algorithms::mergesort::MergeSortBuilder;
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use rand::prelude::*;
 
 fn generate_random_array(size: usize) -> Vec<i32> {

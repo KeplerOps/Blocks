@@ -353,8 +353,7 @@ fn merge<T: Ord + Clone>(slice: &mut [T], mid: usize, aux: &mut Vec<T>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::sync::Arc;
+    use std::sync::atomic::AtomicUsize;
 
     #[test]
     fn test_empty_slice() {
