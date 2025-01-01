@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Display};
 use std::error::Error;
-use rayon::prelude::*;
+use rayon;
 
 /// Error types that can occur during sorting operations
 #[derive(Debug, Clone)]
@@ -236,15 +236,18 @@ impl MergeSortBuilder {
 
         // Sort halves in parallel
         if slice.len() >= self.parallel_threshold {
-            // Create thread-local auxiliary arrays
-            let mut left_aux = vec![slice[0].clone(); mid];
-            let mut right_aux = vec![slice[0].clone(); slice.len() - mid];
+            // Create a clone of the slice to allow parallel processing
+            let mut temp = slice.to_vec();
+            let (left, right) = temp.split_at_mut(mid);
 
-            // Sort halves in parallel with their own auxiliary arrays
+            // Sort halves in parallel
             rayon::join(
-                || self.sort_parallel(&mut slice[..mid], &mut left_aux, depth + 1),
-                || self.sort_parallel(&mut slice[mid..], &mut right_aux, depth + 1),
+                || self.sort_sequential(left, aux, depth + 1),
+                || self.sort_sequential(right, aux, depth + 1),
             );
+
+            // Copy back the sorted results
+            slice.copy_from_slice(&temp);
         } else {
             // Fall back to sequential for smaller chunks
             self.sort_sequential(&mut slice[..mid], aux, depth + 1)?;
