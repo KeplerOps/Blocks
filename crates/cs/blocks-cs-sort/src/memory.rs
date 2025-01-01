@@ -158,8 +158,10 @@ unsafe impl<T: Sync> Sync for SortArena<T> {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
+    use std::sync::{Arc, Barrier};
     use std::thread;
+    use std::alloc::Layout;
+    use std::mem::{self, MaybeUninit};
 
     #[test]
     fn test_arena_allocation() {
@@ -215,6 +217,144 @@ mod tests {
         let layout = arena.layout();
         assert_eq!(layout.size(), 100 * std::mem::size_of::<i32>());
         assert_eq!(layout.align(), std::mem::align_of::<i32>());
+    }
+
+    #[test]
+    fn test_arena_alignment() {
+        // Test with a type that requires strict alignment
+        #[repr(align(16))]
+        #[derive(Debug)]
+        struct Aligned([u8; 32]);
+
+        let arena = SortArena::<Aligned>::new(10).unwrap();
+        let ptr = arena.buffer.as_ptr();
+        
+        // Check pointer alignment
+        assert_eq!(ptr as usize % 16, 0, "Buffer not properly aligned");
+        
+        // Check layout alignment
+        assert_eq!(arena.layout().align(), 16);
+    }
+
+    #[test]
+    fn test_arena_drop() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        
+        static DROP_COUNT: AtomicUsize = AtomicUsize::new(0);
+        
+        struct DropCounter;
+        impl Drop for DropCounter {
+            fn drop(&mut self) {
+                DROP_COUNT.fetch_add(1, Ordering::SeqCst);
+            }
+        }
+
+        // Create and drop arena
+        {
+            let size = 100;
+            let arena = SortArena::<DropCounter>::new(size).unwrap();
+            unsafe {
+                // Initialize counters
+                let slice = std::slice::from_raw_parts_mut(
+                    arena.buffer.as_ptr(),
+                    size
+                );
+                for i in 0..size {
+                    std::ptr::write(&mut slice[i], DropCounter);
+                }
+            }
+            // Arena drops here
+        }
+
+        // Verify all items were dropped
+        assert_eq!(DROP_COUNT.load(Ordering::SeqCst), 100);
+    }
+
+    #[test]
+    fn test_arena_concurrent_access() {
+        let size = 1000;
+        let arena = Arc::new(SortArena::<i32>::new(size).unwrap());
+        let threads = 4;
+        let barrier = Arc::new(Barrier::new(threads));
+        
+        // Spawn threads that read from different parts of the arena
+        let handles: Vec<_> = (0..threads)
+            .map(|i| {
+                let arena = arena.clone();
+                let barrier = barrier.clone();
+                let chunk_size = size / threads;
+                let start = i * chunk_size;
+                let end = start + chunk_size;
+                
+                thread::spawn(move || {
+                    barrier.wait();
+                    unsafe {
+                        let slice = std::slice::from_raw_parts(
+                            arena.buffer.as_ptr().add(start),
+                            chunk_size
+                        );
+                        // Just read the memory to check for race conditions
+                        let _ = std::ptr::read_volatile(&slice[0]);
+                    }
+                })
+            })
+            .collect();
+
+        // Wait for all threads
+        for handle in handles {
+            handle.join().unwrap();
+        }
+    }
+
+    // Memory leak test using custom allocator
+    #[test]
+    fn test_arena_memory_leaks() {
+        use std::alloc::System;
+        
+        struct LeakDetector {
+            allocations: AtomicUsize,
+            deallocations: AtomicUsize,
+        }
+
+        impl LeakDetector {
+            const fn new() -> Self {
+                Self {
+                    allocations: AtomicUsize::new(0),
+                    deallocations: AtomicUsize::new(0),
+                }
+            }
+        }
+
+        unsafe impl GlobalAlloc for LeakDetector {
+            unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+                self.allocations.fetch_add(1, Ordering::SeqCst);
+                System.alloc(layout)
+            }
+
+            unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+                self.deallocations.fetch_add(1, Ordering::SeqCst);
+                System.dealloc(ptr, layout)
+            }
+        }
+
+        #[global_allocator]
+        static LEAK_DETECTOR: LeakDetector = LeakDetector::new();
+
+        // Reset counters
+        LEAK_DETECTOR.allocations.store(0, Ordering::SeqCst);
+        LEAK_DETECTOR.deallocations.store(0, Ordering::SeqCst);
+
+        // Create and drop arena
+        {
+            let _arena = SortArena::<i32>::new(100).unwrap();
+        }
+
+        // Verify all allocations were freed
+        assert_eq!(
+            LEAK_DETECTOR.allocations.load(Ordering::SeqCst),
+            LEAK_DETECTOR.deallocations.load(Ordering::SeqCst),
+            "Memory leak detected"
+        );
     }
 
     // Static assertions for thread safety
@@ -361,6 +501,10 @@ impl MergeBuffer<i32> {
 #[cfg(test)]
 mod buffer_tests {
     use super::*;
+    use std::alloc::Layout;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::{Arc, Barrier};
+    use std::thread;
 
     #[test]
     fn test_buffer_allocation() {
@@ -417,23 +561,158 @@ mod buffer_tests {
     }
 
     #[cfg(target_arch = "x86_64")]
-    #[test]
-    fn test_buffer_simd() {
-        if !is_x86_feature_detected!("avx2") {
-            return; // Skip test if AVX2 not available
+    mod simd_tests {
+        use super::*;
+
+        #[test]
+        fn test_buffer_simd_i32() {
+            if !is_x86_feature_detected!("avx2") {
+                return;
+            }
+
+            let start = std::time::Instant::now();
+            let buffer = MergeBuffer::new(1_000_000, &42i32).unwrap();
+            let duration = start.elapsed();
+            
+            assert_eq!(buffer.capacity(), 1_000_000);
+            assert!(buffer.as_slice().iter().all(|&x| x == 42));
+            assert!(duration.as_micros() < 500, "SIMD initialization took too long");
         }
 
-        let start = std::time::Instant::now();
-        let buffer = MergeBuffer::new(1_000_000, &42i32).unwrap();
-        let duration = start.elapsed();
-        
-        // Verify correctness
-        assert_eq!(buffer.capacity(), 1_000_000);
-        assert!(buffer.as_slice().iter().all(|&x| x == 42));
-        
-        // Should be very fast with SIMD
-        assert!(duration.as_micros() < 500, "SIMD initialization took too long");
+        #[test]
+        fn test_buffer_simd_f32() {
+            if !is_x86_feature_detected!("avx") {
+                return;
+            }
+
+            let start = std::time::Instant::now();
+            let buffer = MergeBuffer::new(1_000_000, &42.0f32).unwrap();
+            let duration = start.elapsed();
+            
+            assert_eq!(buffer.capacity(), 1_000_000);
+            assert!(buffer.as_slice().iter().all(|&x| (x - 42.0).abs() < f32::EPSILON));
+            assert!(duration.as_micros() < 500, "SIMD initialization took too long");
+        }
+
+        #[test]
+        fn test_buffer_simd_alignment() {
+            if !is_x86_feature_detected!("avx2") {
+                return;
+            }
+
+            let buffer = MergeBuffer::new(1000, &42i32).unwrap();
+            let ptr = buffer.as_slice().as_ptr();
+            
+            // AVX2 requires 32-byte alignment for optimal performance
+            assert_eq!(ptr as usize % 32, 0, "Buffer not properly aligned for SIMD");
+        }
+
+        #[test]
+        fn test_buffer_simd_error_conditions() {
+            if !is_x86_feature_detected!("avx2") {
+                return;
+            }
+
+            // Test with size that's not multiple of SIMD width
+            let buffer = MergeBuffer::new(1001, &42i32).unwrap();
+            assert_eq!(buffer.capacity(), 1001);
+            assert!(buffer.as_slice().iter().all(|&x| x == 42));
+        }
     }
+
+    #[test]
+    fn test_buffer_thread_safety() {
+        let size = 1000;
+        let buffer = Arc::new(MergeBuffer::new(size, &42i32).unwrap());
+        let threads = 4;
+        let barrier = Arc::new(Barrier::new(threads));
+        
+        let handles: Vec<_> = (0..threads)
+            .map(|i| {
+                let buffer = buffer.clone();
+                let barrier = barrier.clone();
+                let chunk_size = size / threads;
+                let start = i * chunk_size;
+                
+                thread::spawn(move || {
+                    barrier.wait();
+                    let slice = &buffer.as_slice()[start..start + chunk_size];
+                    assert!(slice.iter().all(|&x| x == 42));
+                })
+            })
+            .collect();
+
+        for handle in handles {
+            handle.join().unwrap();
+        }
+    }
+
+    #[test]
+    fn test_buffer_reallocation() {
+        struct ReallocCounter {
+            reallocs: AtomicUsize,
+        }
+
+        impl ReallocCounter {
+            const fn new() -> Self {
+                Self {
+                    reallocs: AtomicUsize::new(0),
+                }
+            }
+        }
+
+        unsafe impl GlobalAlloc for ReallocCounter {
+            unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+                std::alloc::System.alloc(layout)
+            }
+
+            unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+                self.reallocs.fetch_add(1, Ordering::SeqCst);
+                std::alloc::System.dealloc(ptr, layout)
+            }
+        }
+
+        #[global_allocator]
+        static REALLOC_COUNTER: ReallocCounter = ReallocCounter::new();
+
+        // Reset counter
+        REALLOC_COUNTER.reallocs.store(0, Ordering::SeqCst);
+
+        // Create and drop buffer
+        {
+            let buffer = MergeBuffer::new(1000, &42i32).unwrap();
+            assert_eq!(buffer.capacity(), 1000);
+        }
+
+        // Should only have one deallocation
+        assert_eq!(REALLOC_COUNTER.reallocs.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn test_buffer_drop() {
+        static DROP_COUNT: AtomicUsize = AtomicUsize::new(0);
+        
+        #[derive(Clone)]
+        struct DropCounter;
+        impl Drop for DropCounter {
+            fn drop(&mut self) {
+                DROP_COUNT.fetch_add(1, Ordering::SeqCst);
+            }
+        }
+
+        // Reset counter
+        DROP_COUNT.store(0, Ordering::SeqCst);
+
+        // Create and drop buffer
+        {
+            let size = 100;
+            let _buffer = MergeBuffer::new(size, &DropCounter).unwrap();
+        }
+
+        // Each element should be dropped exactly once
+        assert_eq!(DROP_COUNT.load(Ordering::SeqCst), 100);
+    }
+}
 }
 
 #[cfg(test)]
