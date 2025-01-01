@@ -273,10 +273,14 @@ impl MergeSortBuilder {
             // SAFETY: rayon's join uses unsafe code internally for thread management
             // and parallel execution. This is safe because T: Send + Sync and we're
             // operating on non-overlapping mutable slices.
-            rayon::join(
+            let (left_result, right_result) = rayon::join(
                 || self.sort_sequential(left, &mut left_aux, depth + 1),
                 || self.sort_sequential(right, &mut right_aux, depth + 1),
             );
+
+            // Handle any errors from parallel execution
+            left_result?;
+            right_result?;
 
             // Merge the sorted halves
             merge(slice, mid, aux);
@@ -453,7 +457,7 @@ mod tests {
         let mut arr1 = arr.clone();
         MergeSortBuilder::new()
             .parallel(true)
-            .parallel_threshold(size * 2)
+            .parallel_threshold((size * 2) as usize)
             .sort(&mut arr1)
             .unwrap();
 
@@ -461,7 +465,7 @@ mod tests {
         let mut arr2 = arr.clone();
         MergeSortBuilder::new()
             .parallel(true)
-            .parallel_threshold(size / 2)
+            .parallel_threshold((size / 2) as usize)
             .sort(&mut arr2)
             .unwrap();
 
