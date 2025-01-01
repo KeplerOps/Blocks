@@ -1,5 +1,6 @@
 use std::fmt::{Debug, Display};
 use std::error::Error;
+use rayon::prelude::*;
 
 /// Error types that can occur during sorting operations
 #[derive(Debug, Clone)]
@@ -63,6 +64,8 @@ impl Display for SortErrorKind {
 pub struct MergeSortBuilder {
     insertion_threshold: usize,
     max_recursion_depth: usize,
+    parallel: bool,
+    parallel_threshold: usize,
 }
 
 impl Default for MergeSortBuilder {
@@ -70,6 +73,8 @@ impl Default for MergeSortBuilder {
         Self {
             insertion_threshold: 16, // Tuned via benchmarks
             max_recursion_depth: 48,
+            parallel: false,
+            parallel_threshold: 1024, // Arrays larger than this will be sorted in parallel
         }
     }
 }
@@ -116,9 +121,38 @@ impl MergeSortBuilder {
     /// Returns `SortError` if:
     /// - Memory allocation fails
     /// - Maximum recursion depth is exceeded
+    /// Enables or disables parallel sorting
+    /// 
+    /// When enabled, arrays larger than the parallel threshold will be sorted
+    /// using multiple threads via rayon.
+    /// 
+    /// # Examples
+    /// ```
+    /// use blocks_cs_sort::algorithms::mergesort::MergeSortBuilder;
+    /// 
+    /// let mut arr = vec![5, 2, 8, 1, 9, 3];
+    /// MergeSortBuilder::new()
+    ///     .parallel(true)
+    ///     .sort(&mut arr)
+    ///     .unwrap();
+    /// ```
+    pub fn parallel(mut self, enabled: bool) -> Self {
+        self.parallel = enabled;
+        self
+    }
+
+    /// Sets the threshold above which parallel sorting is used
+    /// 
+    /// Arrays larger than this threshold will be sorted in parallel
+    /// when parallel sorting is enabled.
+    pub fn parallel_threshold(mut self, threshold: usize) -> Self {
+        self.parallel_threshold = threshold;
+        self
+    }
+
     pub fn sort<T>(&self, slice: &mut [T]) -> Result<(), SortError>
     where
-        T: Ord + Clone + Debug,
+        T: Ord + Clone + Debug + Send + Sync,
     {
         if slice.len() <= 1 {
             return Ok(());
@@ -130,10 +164,14 @@ impl MergeSortBuilder {
             aux.set_len(slice.len());
         }
 
-        self.sort_internal(slice, &mut aux, 0)
+        if self.parallel && slice.len() >= self.parallel_threshold {
+            self.sort_parallel(slice, &mut aux, 0)
+        } else {
+            self.sort_sequential(slice, &mut aux, 0)
+        }
     }
 
-    fn sort_internal<T>(
+    fn sort_sequential<T>(
         &self,
         slice: &mut [T],
         aux: &mut Vec<T>,
@@ -162,8 +200,51 @@ impl MergeSortBuilder {
         let mid = slice.len() / 2;
 
         // Recursively sort halves
-        self.sort_internal(&mut slice[..mid], aux, depth + 1)?;
-        self.sort_internal(&mut slice[mid..], aux, depth + 1)?;
+        self.sort_sequential(&mut slice[..mid], aux, depth + 1)?;
+        self.sort_sequential(&mut slice[mid..], aux, depth + 1)?;
+
+        // Merge the sorted halves
+        merge(slice, mid, aux);
+        Ok(())
+    }
+
+    fn sort_parallel<T>(
+        &self,
+        slice: &mut [T],
+        aux: &mut Vec<T>,
+        depth: usize,
+    ) -> Result<(), SortError>
+    where
+        T: Ord + Clone + Debug + Send + Sync,
+    {
+        if depth >= self.max_recursion_depth {
+            return Err(SortError {
+                kind: SortErrorKind::RecursionLimitExceeded,
+                message: format!(
+                    "Exceeded maximum recursion depth of {}",
+                    self.max_recursion_depth
+                ),
+            });
+        }
+
+        if slice.len() <= self.insertion_threshold {
+            insertion_sort(slice);
+            return Ok(());
+        }
+
+        let mid = slice.len() / 2;
+
+        // Sort halves in parallel
+        if slice.len() >= self.parallel_threshold {
+            rayon::join(
+                || self.sort_parallel(&mut slice[..mid], aux, depth + 1),
+                || self.sort_parallel(&mut slice[mid..], aux, depth + 1),
+            );
+        } else {
+            // Fall back to sequential for smaller chunks
+            self.sort_sequential(&mut slice[..mid], aux, depth + 1)?;
+            self.sort_sequential(&mut slice[mid..], aux, depth + 1)?;
+        }
 
         // Merge the sorted halves
         merge(slice, mid, aux);
@@ -228,6 +309,8 @@ fn merge<T: Ord + Clone>(slice: &mut [T], mid: usize, aux: &mut Vec<T>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
 
     #[test]
     fn test_empty_slice() {
@@ -290,5 +373,110 @@ mod tests {
             .sort(&mut arr)
             .unwrap();
         assert_eq!(arr, vec![1, 2, 3, 5, 8, 9]);
+    }
+
+    #[test]
+    fn test_parallel_sorting() {
+        // Create a large array to ensure parallel sorting is used
+        let size = 100_000;
+        let mut arr: Vec<i32> = (0..size).rev().collect();
+        let mut expected = arr.clone();
+        expected.sort();
+
+        // Count parallel executions
+        let parallel_count = Arc::new(AtomicUsize::new(0));
+        let parallel_count_clone = Arc::clone(&parallel_count);
+
+        rayon::ThreadPoolBuilder::new()
+            .start_handler(move |_| {
+                parallel_count_clone.fetch_add(1, Ordering::SeqCst);
+            })
+            .build_global()
+            .unwrap();
+
+        MergeSortBuilder::new()
+            .parallel(true)
+            .parallel_threshold(1000)
+            .sort(&mut arr)
+            .unwrap();
+
+        assert_eq!(arr, expected);
+        assert!(parallel_count.load(Ordering::SeqCst) > 0);
+    }
+
+    #[test]
+    fn test_parallel_threshold() {
+        let size = 10_000;
+        let mut arr: Vec<i32> = (0..size).rev().collect();
+        
+        // Set threshold higher than array size - should use sequential sort
+        let mut arr1 = arr.clone();
+        MergeSortBuilder::new()
+            .parallel(true)
+            .parallel_threshold(size * 2)
+            .sort(&mut arr1)
+            .unwrap();
+
+        // Set threshold lower than array size - should use parallel sort
+        let mut arr2 = arr.clone();
+        MergeSortBuilder::new()
+            .parallel(true)
+            .parallel_threshold(size / 2)
+            .sort(&mut arr2)
+            .unwrap();
+
+        let mut expected = arr;
+        expected.sort();
+
+        assert_eq!(arr1, expected);
+        assert_eq!(arr2, expected);
+    }
+
+    #[test]
+    fn test_parallel_stability() {
+        #[derive(Debug, Clone, Eq, PartialEq)]
+        struct Item {
+            key: i32,
+            original_index: usize,
+        }
+
+        impl PartialOrd for Item {
+            fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+                self.key.partial_cmp(&other.key)
+            }
+        }
+
+        impl Ord for Item {
+            fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+                self.key.cmp(&other.key)
+            }
+        }
+
+        // Create a large array of items with duplicate keys
+        let size = 10_000;
+        let mut items: Vec<_> = (0..size)
+            .map(|i| Item {
+                key: i as i32 / 10, // Create many duplicates
+                original_index: i,
+            })
+            .collect();
+
+        MergeSortBuilder::new()
+            .parallel(true)
+            .parallel_threshold(1000)
+            .sort(&mut items)
+            .unwrap();
+
+        // Verify stability
+        for i in 1..items.len() {
+            if items[i-1].key == items[i].key {
+                assert!(
+                    items[i-1].original_index < items[i].original_index,
+                    "Stability violated at indices {} and {}",
+                    i-1,
+                    i
+                );
+            }
+        }
     }
 }

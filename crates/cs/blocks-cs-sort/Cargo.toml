@@ -11,4 +11,9 @@ rayon = "1.8"
 
 [dev-dependencies]
 proptest = "1.4"
-criterion = "0.5"
+criterion = { version = "0.5", features = ["html_reports"] }
+rand = "0.8"
+
+[[bench]]
+name = "sorting_benchmarks"
+harness = false
