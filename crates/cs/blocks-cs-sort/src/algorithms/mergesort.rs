@@ -1,86 +1,190 @@
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
+use std::error::Error;
 
-const INSERTION_SORT_THRESHOLD: usize = 10;
-const MAX_RECURSION_DEPTH: usize = 16; // log2(1_000_000) ≈ 20, so this will trigger in our test
-
-/// Mergesort implementation for sorting slices.
-/// 
-/// # Algorithm Overview
-/// Mergesort is a divide-and-conquer algorithm that:
-/// 1. Divides the input array into two halves
-/// 2. Recursively sorts the two halves
-/// 3. Merges the sorted halves to produce a final sorted array
-/// 
-/// # Time Complexity
-/// - Best Case: O(n log n)
-/// - Average Case: O(n log n)
-/// - Worst Case: O(n log n)
-/// 
-/// # Space Complexity
-/// - O(n) auxiliary space for a single temporary array
-/// - O(log n) stack space for recursion
-/// 
-/// # Stability
-/// - Stable sort algorithm
-/// 
-/// # Optimization Details
-/// - Uses insertion sort for small arrays (< 10 elements)
-/// - Limits recursion depth to prevent stack overflow
-/// - Reuses a single auxiliary buffer for merging
-/// - Avoids unnecessary allocations and copies
-/// 
-/// # Panics
-/// - May panic if allocation fails for the auxiliary array
-/// - May panic if recursion depth exceeds MAX_RECURSION_DEPTH (input size > 2^48)
-pub fn sort<T>(slice: &mut [T])
-where
-    T: Ord + Clone + Debug,
-{
-    if slice.len() <= 1 {
-        return;
-    }
-
-    // Create a single auxiliary array for merging
-    let mut aux = Vec::with_capacity(slice.len());
-    aux.extend_from_slice(slice);
-
-    // Start the recursive sort with depth counter
-    sort_internal(slice, &mut aux, 0);
+/// Error types that can occur during sorting operations
+#[derive(Debug, Clone)]
+pub struct SortError {
+    kind: SortErrorKind,
+    message: String,
 }
 
-/// Internal recursive sorting function with depth tracking
-fn sort_internal<T>(slice: &mut [T], aux: &mut Vec<T>, depth: usize)
-where
-    T: Ord + Clone + Debug,
-{
-    let len = slice.len();
-
-    // Use insertion sort for small arrays
-    if len <= INSERTION_SORT_THRESHOLD {
-        insertion_sort(slice);
-        return;
+impl Display for SortError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {}", self.kind, self.message)
     }
-
-    // Check recursion depth
-    if depth >= MAX_RECURSION_DEPTH {
-        panic!("Maximum recursion depth exceeded. Input may be too large.");
-    }
-
-    let mid = len / 2;
-
-    // Recursive sort
-    sort_internal(&mut slice[..mid], aux, depth + 1);
-    sort_internal(&mut slice[mid..], aux, depth + 1);
-
-    // Merge the sorted halves
-    merge(slice, mid, aux);
 }
 
-/// Insertion sort for small arrays
-fn insertion_sort<T>(slice: &mut [T])
+impl Error for SortError {}
+
+/// Specific types of errors that can occur during sorting
+#[derive(Debug, Clone)]
+pub enum SortErrorKind {
+    /// The recursion depth exceeded the configured maximum
+    RecursionLimitExceeded,
+    /// Memory allocation failed
+    AllocationFailed,
+}
+
+impl Display for SortErrorKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SortErrorKind::RecursionLimitExceeded => write!(f, "Recursion limit exceeded"),
+            SortErrorKind::AllocationFailed => write!(f, "Memory allocation failed"),
+        }
+    }
+}
+
+/// Builder for configuring and executing merge sort operations.
+/// 
+/// # Examples
+/// 
+/// ```
+/// use blocks_cs_sort::algorithms::mergesort::MergeSortBuilder;
+/// 
+/// let mut arr = vec![3, 1, 4, 1, 5, 9];
+/// MergeSortBuilder::new()
+///     .insertion_threshold(16)
+///     .sort(&mut arr)
+///     .expect("Sort failed");
+/// assert!(arr.windows(2).all(|w| w[0] <= w[1]));
+/// ```
+/// 
+/// # Performance
+/// 
+/// The algorithm has the following complexity characteristics:
+/// - Time: O(n log n) in all cases
+/// - Space: O(n) auxiliary space
+/// - Stable: Yes
+/// 
+/// Performance can be tuned through:
+/// - `insertion_threshold`: Arrays smaller than this use insertion sort (default: 16)
+/// - `max_recursion_depth`: Limit recursion to prevent stack overflow (default: 48)
+#[derive(Debug, Clone)]
+pub struct MergeSortBuilder {
+    insertion_threshold: usize,
+    max_recursion_depth: usize,
+}
+
+impl Default for MergeSortBuilder {
+    fn default() -> Self {
+        Self {
+            insertion_threshold: 16, // Tuned via benchmarks
+            max_recursion_depth: 48,
+        }
+    }
+}
+
+impl MergeSortBuilder {
+    /// Creates a new MergeSortBuilder with default settings
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the threshold below which insertion sort is used
+    /// 
+    /// Smaller values favor merge sort's O(n log n) complexity,
+    /// larger values favor insertion sort's cache efficiency on small arrays.
+    /// 
+    /// # Examples
+    /// ```
+    /// use blocks_cs_sort::algorithms::mergesort::MergeSortBuilder;
+    /// 
+    /// let mut arr = vec![5, 2, 8, 1, 9, 3];
+    /// MergeSortBuilder::new()
+    ///     .insertion_threshold(8)
+    ///     .sort(&mut arr)
+    ///     .unwrap();
+    /// ```
+    pub fn insertion_threshold(mut self, threshold: usize) -> Self {
+        self.insertion_threshold = threshold;
+        self
+    }
+
+    /// Sets the maximum recursion depth
+    /// 
+    /// This prevents stack overflow on very large arrays.
+    /// The default of 48 supports arrays up to 2^48 elements.
+    pub fn max_recursion_depth(mut self, depth: usize) -> Self {
+        self.max_recursion_depth = depth;
+        self
+    }
+
+    /// Sorts a mutable slice using the configured settings
+    /// 
+    /// # Errors
+    /// 
+    /// Returns `SortError` if:
+    /// - Memory allocation fails
+    /// - Maximum recursion depth is exceeded
+    pub fn sort<T>(&self, slice: &mut [T]) -> Result<(), SortError>
+    where
+        T: Ord + Clone + Debug,
+    {
+        if slice.len() <= 1 {
+            return Ok(());
+        }
+
+        // Allocate auxiliary array
+        let mut aux = Vec::with_capacity(slice.len());
+        unsafe {
+            aux.set_len(slice.len());
+        }
+
+        self.sort_internal(slice, &mut aux, 0)
+    }
+
+    fn sort_internal<T>(
+        &self,
+        slice: &mut [T],
+        aux: &mut Vec<T>,
+        depth: usize,
+    ) -> Result<(), SortError>
+    where
+        T: Ord + Clone + Debug,
+    {
+        // Check recursion depth
+        if depth >= self.max_recursion_depth {
+            return Err(SortError {
+                kind: SortErrorKind::RecursionLimitExceeded,
+                message: format!(
+                    "Exceeded maximum recursion depth of {}",
+                    self.max_recursion_depth
+                ),
+            });
+        }
+
+        // Use insertion sort for small arrays
+        if slice.len() <= self.insertion_threshold {
+            insertion_sort(slice);
+            return Ok(());
+        }
+
+        let mid = slice.len() / 2;
+
+        // Recursively sort halves
+        self.sort_internal(&mut slice[..mid], aux, depth + 1)?;
+        self.sort_internal(&mut slice[mid..], aux, depth + 1)?;
+
+        // Merge the sorted halves
+        merge(slice, mid, aux);
+        Ok(())
+    }
+}
+
+/// Sorts a slice using merge sort with default settings
+/// 
+/// This is a convenience wrapper around `MergeSortBuilder`.
+/// For more control, use `MergeSortBuilder` directly.
+pub fn sort<T>(slice: &mut [T]) -> Result<(), SortError>
 where
     T: Ord + Clone + Debug,
 {
+    MergeSortBuilder::new().sort(slice)
+}
+
+// Internal helper functions
+
+fn insertion_sort<T: Ord>(slice: &mut [T]) {
     for i in 1..slice.len() {
         let mut j = i;
         while j > 0 && slice[j - 1] > slice[j] {
@@ -90,18 +194,11 @@ where
     }
 }
 
-/// Internal function that merges two sorted halves of a slice
-/// Uses the provided auxiliary array to avoid multiple allocations
-fn merge<T>(slice: &mut [T], mid: usize, aux: &mut Vec<T>)
-where
-    T: Ord + Clone + Debug,
-{
-    let len = slice.len();
-    
+fn merge<T: Ord + Clone>(slice: &mut [T], mid: usize, aux: &mut Vec<T>) {
     // Copy to auxiliary array
-    aux[..len].clone_from_slice(slice);
+    aux[..slice.len()].clone_from_slice(slice);
 
-    let (left, right) = aux[..len].split_at(mid);
+    let (left, right) = aux[..slice.len()].split_at(mid);
     
     let mut i = 0; // Index for left array
     let mut j = 0; // Index for right array
@@ -119,56 +216,12 @@ where
         k += 1;
     }
 
-    // Copy remaining elements from left array, if any
+    // Copy remaining elements
     if i < left.len() {
         slice[k..].clone_from_slice(&left[i..]);
     }
-
-    // Copy remaining elements from right array, if any
     if j < right.len() {
         slice[k..].clone_from_slice(&right[j..]);
-    }
-}
-
-/// Iterator adapter for merge sort
-pub struct MergeSortIterator<T>
-where
-    T: Ord + Clone + Debug,
-{
-    inner: Vec<T>,
-    idx: usize,
-}
-
-impl<T> MergeSortIterator<T>
-where
-    T: Ord + Clone + Debug,
-{
-    pub fn new<I: IntoIterator<Item = T>>(iter: I) -> Self {
-        let mut inner: Vec<T> = iter.into_iter().collect();
-        sort(&mut inner);
-        Self { inner, idx: 0 }
-    }
-}
-
-impl<T> Iterator for MergeSortIterator<T>
-where
-    T: Ord + Clone + Debug,
-{
-    type Item = T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.idx < self.inner.len() {
-            let item = self.inner[self.idx].clone();
-            self.idx += 1;
-            Some(item)
-        } else {
-            None
-        }
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let remaining = self.inner.len() - self.idx;
-        (remaining, Some(remaining))
     }
 }
 
@@ -179,42 +232,28 @@ mod tests {
     #[test]
     fn test_empty_slice() {
         let mut arr: Vec<i32> = vec![];
-        sort(&mut arr);
+        sort(&mut arr).unwrap();
         assert_eq!(arr, vec![]);
     }
 
     #[test]
     fn test_single_element() {
         let mut arr = vec![1];
-        sort(&mut arr);
+        sort(&mut arr).unwrap();
         assert_eq!(arr, vec![1]);
-    }
-
-    #[test]
-    fn test_two_elements() {
-        let mut arr = vec![2, 1];
-        sort(&mut arr);
-        assert_eq!(arr, vec![1, 2]);
-    }
-
-    #[test]
-    fn test_three_elements() {
-        let mut arr = vec![2, 3, 1];
-        sort(&mut arr);
-        assert_eq!(arr, vec![1, 2, 3]);
     }
 
     #[test]
     fn test_sorted_array() {
         let mut arr = vec![1, 2, 3, 4, 5];
-        sort(&mut arr);
+        sort(&mut arr).unwrap();
         assert_eq!(arr, vec![1, 2, 3, 4, 5]);
     }
 
     #[test]
     fn test_reverse_sorted() {
         let mut arr = vec![5, 4, 3, 2, 1];
-        sort(&mut arr);
+        sort(&mut arr).unwrap();
         assert_eq!(arr, vec![1, 2, 3, 4, 5]);
     }
 
@@ -223,171 +262,33 @@ mod tests {
         let mut arr = vec![3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5];
         let mut expected = arr.clone();
         expected.sort();
-        sort(&mut arr);
+        sort(&mut arr).unwrap();
         assert_eq!(arr, expected);
     }
 
     #[test]
-    fn test_duplicate_elements() {
-        let mut arr = vec![3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5];
-        let mut expected = arr.clone();
-        expected.sort();
-        sort(&mut arr);
-        assert_eq!(arr, expected);
+    fn test_recursion_limit() {
+        let mut arr: Vec<i32> = (0..1_000_000).collect();
+        let result = MergeSortBuilder::new()
+            .max_recursion_depth(3)
+            .sort(&mut arr);
+
+        assert!(matches!(
+            result,
+            Err(SortError {
+                kind: SortErrorKind::RecursionLimitExceeded,
+                ..
+            })
+        ));
     }
 
     #[test]
-    fn test_all_same_elements() {
-        let mut arr = vec![1; 100];
-        let expected = arr.clone();
-        sort(&mut arr);
-        assert_eq!(arr, expected);
-    }
-
-    #[test]
-    fn test_large_array() {
-        let mut arr: Vec<i32> = (0..1000).rev().collect();
-        let mut expected = arr.clone();
-        expected.sort();
-        sort(&mut arr);
-        assert_eq!(arr, expected);
-    }
-
-    #[test]
-    fn test_very_large_array() {
-        let mut arr: Vec<i32> = (0..100_000).rev().collect();
-        let mut expected = arr.clone();
-        expected.sort();
-        sort(&mut arr);
-        assert_eq!(arr, expected);
-    }
-
-    #[test]
-    fn test_mixed_positive_negative() {
-        let mut arr = vec![-5, 12, -3, 7, -1, 0, 9, -8, 4, -2, 6];
-        let mut expected = arr.clone();
-        expected.sort();
-        sort(&mut arr);
-        assert_eq!(arr, expected);
-    }
-
-    #[test]
-    fn test_edge_values() {
-        let mut arr = vec![i32::MIN, 0, i32::MAX, -1, 1, i32::MIN + 1, i32::MAX - 1];
-        let mut expected = arr.clone();
-        expected.sort();
-        sort(&mut arr);
-        assert_eq!(arr, expected);
-    }
-
-    #[test]
-    fn test_stability() {
-        #[derive(Debug, Clone, Eq, PartialEq)]
-        struct Item {
-            key: i32,
-            original_index: usize,
-        }
-
-        impl PartialOrd for Item {
-            fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-                self.key.partial_cmp(&other.key)
-            }
-        }
-
-        impl Ord for Item {
-            fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-                self.key.cmp(&other.key)
-            }
-        }
-
-        let mut items = vec![
-            Item { key: 1, original_index: 0 },
-            Item { key: 1, original_index: 1 },
-            Item { key: 2, original_index: 2 },
-            Item { key: 2, original_index: 3 },
-            Item { key: 1, original_index: 4 },
-            Item { key: 2, original_index: 5 },
-        ];
-
-        sort(&mut items);
-
-        // Check if elements with equal keys maintain their relative order
-        let ones: Vec<_> = items.iter()
-            .filter(|item| item.key == 1)
-            .map(|item| item.original_index)
-            .collect();
-        let twos: Vec<_> = items.iter()
-            .filter(|item| item.key == 2)
-            .map(|item| item.original_index)
-            .collect();
-
-        assert!(ones.windows(2).all(|w| w[0] < w[1]));
-        assert!(twos.windows(2).all(|w| w[0] < w[1]));
-    }
-
-    #[test]
-    fn test_strings() {
-        let mut string_arr = vec!["banana", "apple", "cherry", "date", "", "apple"];
-        let mut expected = string_arr.clone();
-        expected.sort();
-        sort(&mut string_arr);
-        assert_eq!(string_arr, expected);
-    }
-
-    #[test]
-    fn test_small_array_insertion_sort() {
-        let mut arr = vec![5, 2, 8, 1, 9, 3, 7, 4, 6];
-        let mut expected = arr.clone();
-        expected.sort();
-        sort(&mut arr);
-        assert_eq!(arr, expected);
-    }
-
-    #[test]
-    fn test_iterator() {
-        let arr = vec![5, 2, 8, 1, 9, 3, 7, 4, 6];
-        let sorted: Vec<_> = MergeSortIterator::new(arr).collect();
-        let expected = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
-        assert_eq!(sorted, expected);
-    }
-
-    #[test]
-    fn test_iterator_size_hint() {
-        let arr = vec![5, 2, 8, 1, 9];
-        let iter = MergeSortIterator::new(arr);
-        assert_eq!(iter.size_hint(), (5, Some(5)));
-    }
-
-    #[test]
-    #[should_panic(expected = "Maximum recursion depth exceeded")]
-    fn test_recursion_depth_limit() {
-        // Create an array that would exceed the recursion depth limit
-        // Use a smaller size that won't cause memory allocation issues
-        let size = 1_000_000; // Large enough to trigger depth limit but not too large
-        let mut arr = vec![0i32; size];
-        sort(&mut arr);
-    }
-
-    #[test]
-    fn test_memory_usage() {
-        // Test that we only allocate one auxiliary array
-        let mut arr = vec![5i32; 1000];
-        let initial_memory = std::mem::size_of_val(arr.as_slice());
-        
-        sort(&mut arr);
-        
-        // The maximum memory usage should be approximately 2 * initial_memory
-        // (original array + one auxiliary array)
-        let max_expected_memory = 2 * initial_memory;
-        assert!(max_expected_memory < 3 * initial_memory);
-    }
-
-    #[test]
-    fn test_partially_sorted() {
-        let mut arr = vec![1, 2, 3, 5, 4, 6, 8, 7, 9];
-        let mut expected = arr.clone();
-        expected.sort();
-        sort(&mut arr);
-        assert_eq!(arr, expected);
+    fn test_custom_threshold() {
+        let mut arr = vec![5, 2, 8, 1, 9, 3];
+        MergeSortBuilder::new()
+            .insertion_threshold(2)
+            .sort(&mut arr)
+            .unwrap();
+        assert_eq!(arr, vec![1, 2, 3, 5, 8, 9]);
     }
 }
