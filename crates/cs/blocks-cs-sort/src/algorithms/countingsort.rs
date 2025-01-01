@@ -31,13 +31,43 @@ use std::fmt::Debug;
 /// - Not efficient when the range of input values is much larger than n
 /// - Requires extra space proportional to the range of input
 pub fn sort(slice: &mut [u32]) {
-    // Implementation will be added later
+    if slice.len() <= 1 {
+        return;
+    }
+
+    // Find the range of input array
+    let max = find_max(slice);
+    
+    // Create a count array to store count of each unique value
+    let mut count = vec![0; (max + 1) as usize];
+    
+    // Store count of each value
+    for &value in slice.iter() {
+        count[value as usize] += 1;
+    }
+    
+    // Modify count array to store actual position of each value
+    for i in 1..count.len() {
+        count[i] += count[i - 1];
+    }
+    
+    // Build the output array
+    let mut output = vec![0; slice.len()];
+    
+    // Place elements in sorted order
+    // Moving from end to start maintains stability
+    for &value in slice.iter().rev() {
+        count[value as usize] -= 1;
+        output[count[value as usize]] = value;
+    }
+    
+    // Copy back to original array
+    slice.copy_from_slice(&output);
 }
 
 /// Finds the maximum value in the slice
 fn find_max(slice: &[u32]) -> u32 {
-    // Implementation will be added later
-    0
+    slice.iter().max().copied().unwrap_or(0)
 }
 
 #[cfg(test)]
