@@ -30,7 +30,6 @@ pub fn search<T: PartialEq>(arr: &[T], target: &T) -> Option<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::cmp::Ordering;
 
     // Basic functionality tests
     #[test]
