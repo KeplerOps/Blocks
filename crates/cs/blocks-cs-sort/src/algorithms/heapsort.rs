@@ -118,11 +118,20 @@ fn parallel_sort<T: Ord + Send>(slice: &mut [T]) -> Result<()> {
         merge_heaps(&mut slice[..i + chunk_size.min(len - i)])?;
     }
     
-    // Extract elements
-    for i in (0..len).rev() {
-        if i > 0 {
-            slice.swap(0, i);
-            heapify_iterative(&mut slice[..i], 0)?;
+    // Extract elements in parallel for large arrays
+    if len >= PARALLEL_THRESHOLD {
+        slice.par_chunks_mut(chunk_size)
+            .enumerate()
+            .try_for_each(|(i, chunk)| {
+                extract_from_heap(chunk, i * chunk_size)
+            })?;
+    } else {
+        // Sequential extraction for smaller arrays
+        for i in (0..len).rev() {
+            if i > 0 {
+                slice.swap(0, i);
+                heapify_iterative(&mut slice[..i], 0)?;
+            }
         }
     }
     
@@ -130,11 +139,24 @@ fn parallel_sort<T: Ord + Send>(slice: &mut [T]) -> Result<()> {
 }
 
 #[cfg(feature = "parallel")]
-fn merge_heaps<T: Ord>(slice: &mut [T]) -> Result<()> {
+fn parallel_merge_heaps<T: Ord + Send>(slice: &mut [T]) -> Result<()> {
+    use rayon::prelude::*;
+    
     let len = slice.len();
-    for i in (0..len/2).rev() {
-        heapify_iterative(slice, i)?;
+    let chunk_size = (len / rayon::current_num_threads()).max(PARALLEL_THRESHOLD);
+    
+    // Merge in parallel using a divide-and-conquer approach
+    for merge_size in (chunk_size..=len).step_by(chunk_size) {
+        slice.par_chunks_mut(merge_size * 2)
+            .try_for_each(|chunk| {
+                if chunk.len() > merge_size {
+                    merge_heap_sections(chunk, merge_size)
+                } else {
+                    Ok(())
+                }
+            })?;
     }
+    
     Ok(())
 }
 
@@ -174,6 +196,39 @@ fn heapify_iterative<T: Ord>(slice: &mut [T], root: usize) -> Result<()> {
         current = largest;
     }
     
+    Ok(())
+}
+
+#[cfg(feature = "parallel")]
+fn merge_heaps<T: Ord>(slice: &mut [T]) -> Result<()> {
+    for i in (0..slice.len()/2).rev() {
+        heapify_iterative(slice, i)?;
+    }
+    Ok(())
+}
+
+#[cfg(feature = "parallel")]
+fn merge_heap_sections<T: Ord>(slice: &mut [T], mid: usize) -> Result<()> {
+    if mid >= slice.len() {
+        return Ok(());
+    }
+    
+    // Rebuild heap property for the merged section
+    for i in (0..slice.len()/2).rev() {
+        heapify_iterative(slice, i)?;
+    }
+    Ok(())
+}
+
+#[cfg(feature = "parallel")]
+fn extract_from_heap<T: Ord>(slice: &mut [T], offset: usize) -> Result<()> {
+    let len = slice.len();
+    for i in (0..len).rev() {
+        if i > 0 {
+            slice.swap(0, i);
+            heapify_iterative(&mut slice[..i], 0)?;
+        }
+    }
     Ok(())
 }
 

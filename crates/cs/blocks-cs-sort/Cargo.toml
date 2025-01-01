@@ -16,4 +16,9 @@ rayon = { version = "1.10", optional = true }
 wide = { version = "0.7.3", optional = true }
 
 [dev-dependencies]
-criterion = "0.5"
+criterion = { version = "0.5", features = ["html_reports"] }
+rand = "0.8"
+
+[[bench]]
+name = "heapsort_benchmarks"
+harness = false
