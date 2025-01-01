@@ -4,21 +4,56 @@ use std::marker::PhantomData;
 use std::mem::{self, MaybeUninit};
 use crate::error::{Result, SortError};
 
+/// Cache line size for the current architecture.
+#[cfg(target_arch = "x86_64")]
+const CACHE_LINE_SIZE: usize = 64;
+#[cfg(target_arch = "aarch64")]
+const CACHE_LINE_SIZE: usize = 64;
+#[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+const CACHE_LINE_SIZE: usize = 32;
+
+/// SIMD vector size for the current architecture.
+#[cfg(target_arch = "x86_64")]
+const SIMD_WIDTH: usize = 32; // AVX-256
+#[cfg(target_arch = "aarch64")]
+const SIMD_WIDTH: usize = 16; // NEON
+#[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+const SIMD_WIDTH: usize = 16;
+
 /// A simple arena allocator for merge sort operations.
 /// This reduces allocation overhead by reusing memory.
 /// 
 /// # Safety
 /// 
 /// This type uses raw pointers internally and requires several safety invariants:
-/// - The buffer must be properly aligned for type T
+/// - The buffer must be properly aligned for type T and SIMD operations
 /// - The buffer must be properly initialized before use
 /// - The buffer must not exceed isize::MAX bytes
 /// - The type T must be properly dropped when the arena is dropped
 /// 
 /// These invariants are maintained by the public API and checked at runtime
 /// where possible.
+/// 
+/// # Memory Layout
+/// 
+/// The arena ensures optimal memory layout for performance:
+/// - Buffer is aligned to cache line boundaries (64 bytes on x86_64/aarch64)
+/// - Buffer size is padded to SIMD vector width when possible
+/// - Elements are properly aligned for their type requirements
+/// 
+/// ```text
+/// Memory Layout:
+/// ┌────────────────────────────────────────┐
+/// │ Cache Line Aligned Buffer              │
+/// ├────────────────────┬──────────────────┤
+/// │ SIMD Vector 1      │ SIMD Vector 2    │
+/// ├────────────────────┼──────────────────┤
+/// │ Elements 1-8       │ Elements 9-16    │
+/// └────────────────────┴──────────────────┘
+/// ```
+#[repr(C, align(64))]  // Align to cache line
 pub(crate) struct SortArena<T> {
-    /// Raw pointer to the allocated memory
+    /// Raw pointer to the allocated memory (SIMD aligned)
     buffer: NonNull<T>,
     /// Number of elements the buffer can hold
     capacity: usize,
@@ -28,7 +63,13 @@ pub(crate) struct SortArena<T> {
     _marker: PhantomData<T>,
 }
 
-/// Compute the layout for an array of T with proper alignment
+/// Compute the layout for an array of T with proper alignment for SIMD and cache efficiency.
+/// 
+/// This function ensures:
+/// 1. The buffer is aligned to cache line boundaries
+/// 2. Each element is properly aligned for its type
+/// 3. The total size is padded for SIMD operations
+/// 4. Memory limits are respected
 fn array_layout<T>(capacity: usize) -> Result<Layout> {
     // Check for zero capacity
     if capacity == 0 {
@@ -38,10 +79,27 @@ fn array_layout<T>(capacity: usize) -> Result<Layout> {
         ));
     }
 
-    // Check total size against isize::MAX
+    // Get element properties
     let element_size = mem::size_of::<T>();
+    let element_align = mem::align_of::<T>();
+
+    // Calculate required alignment (max of cache line, SIMD width, and type alignment)
+    let required_align = CACHE_LINE_SIZE
+        .max(SIMD_WIDTH)
+        .max(element_align);
+
+    // Calculate padded capacity for SIMD operations
+    let simd_elements = SIMD_WIDTH / element_size;
+    let padded_capacity = if simd_elements > 1 {
+        // Round up to nearest SIMD vector size
+        (capacity + simd_elements - 1) & !(simd_elements - 1)
+    } else {
+        capacity
+    };
+
+    // Check total size against isize::MAX
     let total_size = element_size
-        .checked_mul(capacity)
+        .checked_mul(padded_capacity)
         .ok_or_else(|| SortError::allocation_failed(
             "Buffer size overflow",
             None
@@ -55,11 +113,24 @@ fn array_layout<T>(capacity: usize) -> Result<Layout> {
     }
 
     // Create layout with proper alignment
-    Layout::array::<T>(capacity)
+    let layout = Layout::from_size_align(total_size, required_align)
         .map_err(|e| SortError::allocation_failed(
             format!("Invalid layout: {}", e),
             None
-        ))
+        ))?;
+
+    // Verify alignment requirements are met
+    debug_assert!(layout.align() >= element_align, 
+        "Layout alignment {} is less than type alignment {}", 
+        layout.align(), element_align);
+    debug_assert!(layout.align() >= SIMD_WIDTH,
+        "Layout alignment {} is less than SIMD width {}", 
+        layout.align(), SIMD_WIDTH);
+    debug_assert!(layout.size() % SIMD_WIDTH == 0,
+        "Layout size {} is not a multiple of SIMD width {}", 
+        layout.size(), SIMD_WIDTH);
+
+    Ok(layout)
 }
 
 impl<T> SortArena<T> {
@@ -219,21 +290,121 @@ mod tests {
         assert_eq!(layout.align(), std::mem::align_of::<i32>());
     }
 
-    #[test]
-    fn test_arena_alignment() {
-        // Test with a type that requires strict alignment
-        #[repr(align(16))]
-        #[derive(Debug)]
-        struct Aligned([u8; 32]);
+    mod alignment_tests {
+        use super::*;
 
-        let arena = SortArena::<Aligned>::new(10).unwrap();
-        let ptr = arena.buffer.as_ptr();
-        
-        // Check pointer alignment
-        assert_eq!(ptr as usize % 16, 0, "Buffer not properly aligned");
-        
-        // Check layout alignment
-        assert_eq!(arena.layout().align(), 16);
+        #[test]
+        fn test_basic_alignment() {
+            // Test with a type that requires strict alignment
+            #[repr(align(16))]
+            #[derive(Debug)]
+            struct Aligned([u8; 32]);
+
+            let arena = SortArena::<Aligned>::new(10).unwrap();
+            let ptr = arena.buffer.as_ptr();
+            
+            // Check pointer alignment
+            assert_eq!(ptr as usize % 16, 0, "Buffer not properly aligned");
+            
+            // Check layout alignment
+            assert_eq!(arena.layout().align(), 64); // Should be cache line aligned
+        }
+
+        #[test]
+        fn test_simd_alignment() {
+            let arena = SortArena::<i32>::new(100).unwrap();
+            let ptr = arena.buffer.as_ptr();
+            let layout = arena.layout();
+
+            // Check SIMD alignment requirements
+            assert!(layout.align() >= SIMD_WIDTH);
+            assert_eq!(ptr as usize % SIMD_WIDTH, 0);
+            assert_eq!(layout.size() % SIMD_WIDTH, 0);
+        }
+
+        #[test]
+        fn test_cache_line_alignment() {
+            let arena = SortArena::<u8>::new(1000).unwrap();
+            let ptr = arena.buffer.as_ptr();
+            let layout = arena.layout();
+
+            // Check cache line alignment
+            assert!(layout.align() >= CACHE_LINE_SIZE);
+            assert_eq!(ptr as usize % CACHE_LINE_SIZE, 0);
+        }
+
+        #[test]
+        fn test_padded_capacity() {
+            // Test with a type smaller than SIMD width
+            let size = 10;
+            let arena = SortArena::<i32>::new(size).unwrap();
+            let layout = arena.layout();
+
+            // Should be padded to SIMD width
+            let simd_elements = SIMD_WIDTH / std::mem::size_of::<i32>();
+            let expected_capacity = ((size + simd_elements - 1) / simd_elements) * simd_elements;
+            assert_eq!(layout.size(), expected_capacity * std::mem::size_of::<i32>());
+        }
+
+        #[test]
+        fn test_large_alignment() {
+            // Test with a large alignment requirement
+            #[repr(align(128))]
+            #[derive(Debug)]
+            struct LargeAlign([u8; 256]);
+
+            let arena = SortArena::<LargeAlign>::new(5).unwrap();
+            let ptr = arena.buffer.as_ptr();
+            let layout = arena.layout();
+
+            // Should respect both type alignment and cache line size
+            assert!(layout.align() >= 128);
+            assert!(layout.align() >= CACHE_LINE_SIZE);
+            assert_eq!(ptr as usize % 128, 0);
+        }
+
+        #[test]
+        fn test_mixed_size_alignment() {
+            // Test with types of different sizes
+            let arena1 = SortArena::<u8>::new(1000).unwrap();
+            let arena2 = SortArena::<u16>::new(500).unwrap();
+            let arena3 = SortArena::<u32>::new(250).unwrap();
+            let arena4 = SortArena::<u64>::new(125).unwrap();
+
+            // All should be cache line and SIMD aligned
+            for arena in [&arena1, &arena2, &arena3, &arena4] {
+                let ptr = arena.buffer.as_ptr() as usize;
+                let layout = arena.layout();
+
+                assert!(layout.align() >= CACHE_LINE_SIZE);
+                assert!(layout.align() >= SIMD_WIDTH);
+                assert_eq!(ptr % CACHE_LINE_SIZE, 0);
+                assert_eq!(ptr % SIMD_WIDTH, 0);
+            }
+        }
+
+        #[test]
+        fn test_alignment_stress() {
+            // Test alignment with various sizes around SIMD boundaries
+            let sizes = [
+                SIMD_WIDTH - 1,
+                SIMD_WIDTH,
+                SIMD_WIDTH + 1,
+                SIMD_WIDTH * 2 - 1,
+                SIMD_WIDTH * 2,
+                SIMD_WIDTH * 2 + 1,
+            ];
+
+            for &size in &sizes {
+                let arena = SortArena::<u8>::new(size).unwrap();
+                let layout = arena.layout();
+
+                // Check alignment requirements
+                assert!(layout.align() >= CACHE_LINE_SIZE);
+                assert!(layout.size() % SIMD_WIDTH == 0);
+                assert_eq!(arena.buffer.as_ptr() as usize % SIMD_WIDTH, 0);
+            }
+        }
     }
 
     #[test]
