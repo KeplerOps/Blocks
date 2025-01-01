@@ -1,35 +1,103 @@
+#![warn(missing_docs)]
+#![warn(clippy::missing_docs_in_private_items)]
+
 /// Performs a linear search on a slice to find a target element.
 ///
+/// This function implements a simple linear (sequential) search algorithm that finds
+/// the first occurrence of a given element in a slice. It's particularly useful when:
+/// - The data is not sorted
+/// - The dataset is small
+/// - Memory constraints prevent sorting or using more complex data structures
+/// - The data is rarely searched (making preprocessing costs unjustifiable)
+///
 /// # Algorithm Details
-/// - Time Complexity: O(n) where n is the length of the array
+/// - Time Complexity: O(n) where n is the length of the slice
 /// - Space Complexity: O(1)
 /// - In-place: Yes
 /// - Stable: Yes (maintains relative order of equal elements)
+/// - Early exit: Yes (returns as soon as element is found)
 ///
-/// # Implementation Notes
-/// - Iterates through the array sequentially
-/// - Returns the index of the first occurrence of the target element
-/// - Returns None if the element is not found
+/// # Type Parameters
+/// - `T`: The type of elements in the slice, must implement [`PartialEq`]
+///
+/// # Arguments
+/// * `arr` - A slice of elements to search through
+/// * `target` - The element to find in the slice
+///
+/// # Returns
+/// - `Some(index)` if the element is found, where `index` is the position of the first occurrence
+/// - `None` if the element is not present in the slice
 ///
 /// # Examples
+/// Basic usage with integers:
 /// ```
 /// use blocks_cs_search::algorithms::linear::search;
 /// let numbers = vec![3, 1, 4, 1, 5, 9, 2, 6, 5, 3];
 /// assert_eq!(search(&numbers, &4), Some(2));
 /// assert_eq!(search(&numbers, &7), None);
 /// ```
+///
+/// Works with any type that implements [`PartialEq`]:
+/// ```
+/// use blocks_cs_search::algorithms::linear::search;
+/// let words = vec!["apple", "banana", "cherry"];
+/// assert_eq!(search(&words, &"banana"), Some(1));
+/// ```
+///
+/// # Performance Considerations
+/// - For sorted data, consider using [`binary_search`] instead
+/// - For frequently searched datasets, consider using a [`HashSet`] or [`HashMap`]
+/// - For very large datasets, consider using more efficient search algorithms or data structures
+///
+/// [`binary_search`]: https://doc.rust-lang.org/std/primitive.slice.html#method.binary_search
+/// [`HashSet`]: https://doc.rust-lang.org/std/collections/struct.HashSet.html
+/// [`HashMap`]: https://doc.rust-lang.org/std/collections/struct.HashMap.html
+#[inline]
 pub fn search<T: PartialEq>(arr: &[T], target: &T) -> Option<usize> {
-    for (index, item) in arr.iter().enumerate() {
-        if item == target {
-            return Some(index);
-        }
-    }
-    None
+    // SIMD would be beneficial here for primitive types, but that requires
+    // unsafe code and architecture-specific optimizations. For an enterprise
+    // implementation, we might want to add a feature flag for SIMD support.
+    arr.iter()
+        .position(|item| item == target)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use quickcheck_macros::quickcheck;
+
+    // Property-based tests
+    #[quickcheck]
+    fn prop_found_element_exists(xs: Vec<i32>, index: usize) -> bool {
+        if xs.is_empty() || index >= xs.len() {
+            return true;
+        }
+        let target = xs[index];
+        match search(&xs, &target) {
+            Some(found_index) => xs[found_index] == target && 
+                                // Verify it's the first occurrence
+                                !xs[..found_index].contains(&target),
+            None => false // If we picked an element from the vector, it must be found
+        }
+    }
+
+    #[quickcheck]
+    fn prop_not_found_element_absent(xs: Vec<i32>, x: i32) -> bool {
+        match search(&xs, &x) {
+            Some(index) => xs[index] == x,
+            None => !xs.contains(&x)
+        }
+    }
+
+    #[quickcheck]
+    fn prop_maintains_invariants(xs: Vec<i32>, x: i32) -> bool {
+        let result = search(&xs, &x);
+        
+        // If found, index must be valid and element must match
+        result.map_or(true, |i| i < xs.len() && xs[i] == x) &&
+        // If not found, element must not exist in array
+        result.is_none() == !xs.contains(&x)
+    }
 
     // Basic functionality tests
     #[test]
