@@ -30,14 +30,37 @@ pub fn sort<T>(slice: &mut [T])
 where
     T: Ord + Clone + Debug,
 {
-    // Implementation will be added later
+    let len = slice.len();
+    if len <= 1 {
+        return;
+    }
+
+    // Start with the largest gap and work down to a gap of 1
+    let mut gap = calculate_initial_gap(len);
+    
+    while gap > 0 {
+        // Do a gapped insertion sort for this gap size
+        for i in gap..len {
+            let mut j = i;
+            while j >= gap && slice[j - gap] > slice[j] {
+                slice.swap(j - gap, j);
+                j -= gap;
+            }
+        }
+
+        // Calculate next gap
+        gap = if gap == 2 { 1 } else { gap / 3 };
+    }
 }
 
 /// Calculates the initial gap using Knuth's sequence: h = 3h + 1
 /// This sequence has been shown to work well in practice
 fn calculate_initial_gap(len: usize) -> usize {
-    // Implementation will be added later
-    0
+    let mut gap = 1;
+    while gap < len / 3 {
+        gap = 3 * gap + 1;
+    }
+    gap
 }
 
 #[cfg(test)]
