@@ -17,6 +17,7 @@ use std::fmt::Debug;
 use rayon;
 
 use crate::error::{Result, SortError};
+use crate::memory::{MergeBuffer, SortArena};
 
 /// Builder for configuring and executing merge sort operations.
 /// 
@@ -154,16 +155,8 @@ impl MergeSortBuilder {
             return Err(SortError::input_too_large(slice.len(), Self::MAX_LENGTH));
         }
 
-        // Create a single auxiliary array for merging
-        let mut aux = Vec::new();
-        aux.try_reserve_exact(slice.len())
-            .map_err(|e| SortError::allocation_failed(
-                format!("Failed to allocate auxiliary buffer of size {}", slice.len()),
-                Some(e)
-            ))?;
-
-        // Initialize auxiliary array with default values
-        aux.extend(std::iter::repeat_with(|| slice[0].clone()).take(slice.len()));
+        // Create auxiliary buffer for merging
+        let mut aux = MergeBuffer::new(slice.len(), &slice[0])?;
 
         // Start the recursive sort with depth counter
         if self.parallel && slice.len() >= self.parallel_threshold {
@@ -232,26 +225,9 @@ impl MergeSortBuilder {
 
         let mid = slice.len() / 2;
 
-        // Create auxiliary arrays before splitting the slice
-        let template = slice[0].clone();
-        let mut left_aux = Vec::new();
-        let mut right_aux = Vec::new();
-
-        // Allocate auxiliary arrays
-        left_aux.try_reserve_exact(mid)
-            .map_err(|e| SortError::allocation_failed(
-                format!("Failed to allocate left auxiliary buffer of size {}", mid),
-                Some(e)
-            ))?;
-        right_aux.try_reserve_exact(slice.len() - mid)
-            .map_err(|e| SortError::allocation_failed(
-                format!("Failed to allocate right auxiliary buffer of size {}", slice.len() - mid),
-                Some(e)
-            ))?;
-
-        // Initialize auxiliary arrays
-        left_aux.extend(std::iter::repeat_with(|| template.clone()).take(mid));
-        right_aux.extend(std::iter::repeat_with(|| template.clone()).take(slice.len() - mid));
+        // Create auxiliary buffers for parallel sorting
+        let mut left_aux = MergeBuffer::new(mid, &slice[0])?;
+        let mut right_aux = MergeBuffer::new(slice.len() - mid, &slice[0])?;
 
         // SAFETY: split_at_mut is safe but uses unsafe code internally to create
         // two mutable references to different parts of the slice. This is safe
@@ -311,11 +287,12 @@ fn insertion_sort<T: Ord>(slice: &mut [T]) {
     }
 }
 
-fn merge<T: Ord + Clone>(slice: &mut [T], mid: usize, aux: &mut Vec<T>) {
-    // Copy to auxiliary array
-    aux[..slice.len()].clone_from_slice(slice);
+fn merge<T: Ord + Clone>(slice: &mut [T], mid: usize, aux: &mut MergeBuffer<T>) {
+    // Copy to auxiliary buffer
+    aux.as_mut_slice()[..slice.len()].clone_from_slice(slice);
 
-    let (left, right) = aux[..slice.len()].split_at(mid);
+    let aux_slice = aux.as_slice();
+    let (left, right) = aux_slice[..slice.len()].split_at(mid);
     
     let mut i = 0; // Index for left array
     let mut j = 0; // Index for right array
