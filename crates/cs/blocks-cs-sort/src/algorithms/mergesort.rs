@@ -265,12 +265,16 @@ impl MergeSortBuilder {
             // because the ranges are guaranteed not to overlap.
             let (left, right) = slice.split_at_mut(mid);
 
+            // Create separate auxiliary arrays for parallel tasks
+            let mut left_aux = vec![slice[0].clone(); left.len()];
+            let mut right_aux = vec![slice[0].clone(); right.len()];
+
             // SAFETY: rayon's join uses unsafe code internally for thread management
             // and parallel execution. This is safe because T: Send + Sync and we're
             // operating on non-overlapping mutable slices.
             rayon::join(
-                || self.sort_sequential(left, aux, depth + 1),
-                || self.sort_sequential(right, aux, depth + 1),
+                || self.sort_sequential(left, &mut left_aux, depth + 1),
+                || self.sort_sequential(right, &mut right_aux, depth + 1),
             );
 
             // Merge the sorted halves
