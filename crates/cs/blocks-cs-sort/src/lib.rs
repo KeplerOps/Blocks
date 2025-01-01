@@ -30,3 +30,6 @@ assert_eq!(numbers, vec![1, 1, 2, 3, 3, 4, 5, 5, 6, 9]);
 */
 
 pub mod algorithms;
+pub mod error;
+
+pub use error::{Result, SortError};

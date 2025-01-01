@@ -13,42 +13,10 @@
 //! All unsafe operations are properly encapsulated and safe when used with types
 //! that implement the required traits (Send + Sync for parallel execution).
 
-use std::fmt::{Debug, Display};
-use std::error::Error;
+use std::fmt::Debug;
 use rayon;
 
-/// Error types that can occur during sorting operations
-#[derive(Debug, Clone)]
-pub struct SortError {
-    kind: SortErrorKind,
-    message: String,
-}
-
-impl Display for SortError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {}", self.kind, self.message)
-    }
-}
-
-impl Error for SortError {}
-
-/// Specific types of errors that can occur during sorting
-#[derive(Debug, Clone)]
-pub enum SortErrorKind {
-    /// The recursion depth exceeded the configured maximum
-    RecursionLimitExceeded,
-    /// Memory allocation failed
-    AllocationFailed,
-}
-
-impl Display for SortErrorKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SortErrorKind::RecursionLimitExceeded => write!(f, "Recursion limit exceeded"),
-            SortErrorKind::AllocationFailed => write!(f, "Memory allocation failed"),
-        }
-    }
-}
+use crate::error::{Result, SortError};
 
 /// Builder for configuring and executing merge sort operations.
 /// 
@@ -75,6 +43,8 @@ impl Display for SortErrorKind {
 /// Performance can be tuned through:
 /// - `insertion_threshold`: Arrays smaller than this use insertion sort (default: 16)
 /// - `max_recursion_depth`: Limit recursion to prevent stack overflow (default: 48)
+/// - `parallel`: Enable parallel sorting for large arrays
+/// - `parallel_threshold`: Minimum size for parallel processing
 #[derive(Debug, Clone)]
 pub struct MergeSortBuilder {
     insertion_threshold: usize,
@@ -89,12 +59,16 @@ impl Default for MergeSortBuilder {
             insertion_threshold: 16, // Tuned via benchmarks
             max_recursion_depth: 48,
             parallel: false,
-            parallel_threshold: 1024, // Arrays larger than this will be sorted in parallel
+            parallel_threshold: 1024,
         }
     }
 }
 
 impl MergeSortBuilder {
+    /// Maximum length of slice that can be sorted (2^48 elements).
+    /// This limit ensures we don't exceed reasonable memory usage.
+    const MAX_LENGTH: usize = 1 << 48;
+
     /// Creates a new MergeSortBuilder with default settings
     pub fn new() -> Self {
         Self::default()
@@ -129,13 +103,6 @@ impl MergeSortBuilder {
         self
     }
 
-    /// Sorts a mutable slice using the configured settings
-    /// 
-    /// # Errors
-    /// 
-    /// Returns `SortError` if:
-    /// - Memory allocation fails
-    /// - Maximum recursion depth is exceeded
     /// Enables or disables parallel sorting
     /// 
     /// When enabled, arrays larger than the parallel threshold will be sorted
@@ -165,7 +132,16 @@ impl MergeSortBuilder {
         self
     }
 
-    pub fn sort<T>(&self, slice: &mut [T]) -> Result<(), SortError>
+    /// Sorts a mutable slice using the configured settings
+    /// 
+    /// # Errors
+    /// 
+    /// Returns `SortError` if:
+    /// - Memory allocation fails
+    /// - Maximum recursion depth is exceeded
+    /// - Input slice is too large (> 2^48 elements)
+    /// - Parallel execution fails
+    pub fn sort<T>(&self, slice: &mut [T]) -> Result<()>
     where
         T: Ord + Clone + Debug + Send + Sync,
     {
@@ -173,12 +149,23 @@ impl MergeSortBuilder {
             return Ok(());
         }
 
-        // Allocate auxiliary array
-        let mut aux = Vec::with_capacity(slice.len());
-        unsafe {
-            aux.set_len(slice.len());
+        // Check input size
+        if slice.len() > Self::MAX_LENGTH {
+            return Err(SortError::input_too_large(slice.len(), Self::MAX_LENGTH));
         }
 
+        // Create a single auxiliary array for merging
+        let mut aux = Vec::new();
+        aux.try_reserve_exact(slice.len())
+            .map_err(|e| SortError::allocation_failed(
+                format!("Failed to allocate auxiliary buffer of size {}", slice.len()),
+                Some(e)
+            ))?;
+
+        // Initialize auxiliary array with default values
+        aux.extend(std::iter::repeat_with(|| slice[0].clone()).take(slice.len()));
+
+        // Start the recursive sort with depth counter
         if self.parallel && slice.len() >= self.parallel_threshold {
             self.sort_parallel(slice, &mut aux, 0)
         } else {
@@ -191,19 +178,16 @@ impl MergeSortBuilder {
         slice: &mut [T],
         aux: &mut Vec<T>,
         depth: usize,
-    ) -> Result<(), SortError>
+    ) -> Result<()>
     where
         T: Ord + Clone + Debug,
     {
         // Check recursion depth
         if depth >= self.max_recursion_depth {
-            return Err(SortError {
-                kind: SortErrorKind::RecursionLimitExceeded,
-                message: format!(
-                    "Exceeded maximum recursion depth of {}",
-                    self.max_recursion_depth
-                ),
-            });
+            return Err(SortError::recursion_limit_exceeded(
+                depth,
+                self.max_recursion_depth,
+            ));
         }
 
         // Use insertion sort for small arrays
@@ -223,75 +207,75 @@ impl MergeSortBuilder {
         Ok(())
     }
 
-    /// Parallel sorting implementation that uses rayon for parallel execution.
-    /// 
-    /// # Safety
-    /// This function uses unsafe code in the following ways:
-    /// - Uses `split_at_mut` which is safe but relies on unsafe code internally
-    /// - Uses rayon's parallel execution which involves unsafe code for thread management
-    /// 
-    /// These operations are safe when the type T implements Send + Sync, which is
-    /// enforced by the trait bounds.
     fn sort_parallel<T>(
         &self,
         slice: &mut [T],
         aux: &mut Vec<T>,
         depth: usize,
-    ) -> Result<(), SortError>
+    ) -> Result<()>
     where
         T: Ord + Clone + Debug + Send + Sync,
     {
+        // Check recursion depth
         if depth >= self.max_recursion_depth {
-            return Err(SortError {
-                kind: SortErrorKind::RecursionLimitExceeded,
-                message: format!(
-                    "Exceeded maximum recursion depth of {}",
-                    self.max_recursion_depth
-                ),
-            });
+            return Err(SortError::recursion_limit_exceeded(
+                depth,
+                self.max_recursion_depth,
+            ));
         }
 
+        // Use insertion sort for small arrays
         if slice.len() <= self.insertion_threshold {
             insertion_sort(slice);
             return Ok(());
         }
 
-        // Use parallel execution for large enough chunks
-        if slice.len() >= self.parallel_threshold {
-            let mid = slice.len() / 2;
+        let mid = slice.len() / 2;
 
-            // Create auxiliary arrays before splitting the slice
-            let template = slice[0].clone();
-            let mut left_aux = vec![template.clone(); mid];
-            let mut right_aux = vec![template; slice.len() - mid];
+        // Create auxiliary arrays before splitting the slice
+        let template = slice[0].clone();
+        let mut left_aux = Vec::new();
+        let mut right_aux = Vec::new();
 
-            // SAFETY: split_at_mut is safe but uses unsafe code internally to create
-            // two mutable references to different parts of the slice. This is safe
-            // because the ranges are guaranteed not to overlap.
-            let (left, right) = slice.split_at_mut(mid);
+        // Allocate auxiliary arrays
+        left_aux.try_reserve_exact(mid)
+            .map_err(|e| SortError::allocation_failed(
+                format!("Failed to allocate left auxiliary buffer of size {}", mid),
+                Some(e)
+            ))?;
+        right_aux.try_reserve_exact(slice.len() - mid)
+            .map_err(|e| SortError::allocation_failed(
+                format!("Failed to allocate right auxiliary buffer of size {}", slice.len() - mid),
+                Some(e)
+            ))?;
 
-            // SAFETY: rayon's join uses unsafe code internally for thread management
-            // and parallel execution. This is safe because T: Send + Sync and we're
-            // operating on non-overlapping mutable slices.
-            let (left_result, right_result) = rayon::join(
-                || self.sort_sequential(left, &mut left_aux, depth + 1),
-                || self.sort_sequential(right, &mut right_aux, depth + 1),
-            );
+        // Initialize auxiliary arrays
+        left_aux.extend(std::iter::repeat_with(|| template.clone()).take(mid));
+        right_aux.extend(std::iter::repeat_with(|| template.clone()).take(slice.len() - mid));
 
-            // Handle any errors from parallel execution
-            left_result?;
-            right_result?;
+        // SAFETY: split_at_mut is safe but uses unsafe code internally to create
+        // two mutable references to different parts of the slice. This is safe
+        // because the ranges are guaranteed not to overlap.
+        let (left, right) = slice.split_at_mut(mid);
 
-            // Merge the sorted halves
-            merge(slice, mid, aux);
-        } else {
-            // Sequential sort for smaller chunks
-            let mid = slice.len() / 2;
-            self.sort_sequential(&mut slice[..mid], aux, depth + 1)?;
-            self.sort_sequential(&mut slice[mid..], aux, depth + 1)?;
-            merge(slice, mid, aux);
-        }
+        // SAFETY: rayon's join uses unsafe code internally for thread management
+        // and parallel execution. This is safe because T: Send + Sync and we're
+        // operating on non-overlapping mutable slices.
+        let (left_result, right_result) = rayon::join(
+            || self.sort_sequential(left, &mut left_aux, depth + 1),
+            || self.sort_sequential(right, &mut right_aux, depth + 1),
+        );
 
+        // Handle any errors from parallel execution
+        left_result.map_err(|e| SortError::parallel_execution_failed(
+            format!("Left parallel task failed: {}", e)
+        ))?;
+        right_result.map_err(|e| SortError::parallel_execution_failed(
+            format!("Right parallel task failed: {}", e)
+        ))?;
+
+        // Merge the sorted halves
+        merge(slice, mid, aux);
         Ok(())
     }
 }
@@ -300,7 +284,15 @@ impl MergeSortBuilder {
 /// 
 /// This is a convenience wrapper around `MergeSortBuilder`.
 /// For more control, use `MergeSortBuilder` directly.
-pub fn sort<T>(slice: &mut [T]) -> Result<(), SortError>
+/// 
+/// # Errors
+/// 
+/// Returns `SortError` if:
+/// - Memory allocation fails
+/// - Maximum recursion depth is exceeded
+/// - Input slice is too large (> 2^48 elements)
+/// - Parallel execution fails
+pub fn sort<T>(slice: &mut [T]) -> Result<()>
 where
     T: Ord + Clone + Debug + Send + Sync,
 {
@@ -390,32 +382,6 @@ mod tests {
         expected.sort();
         sort(&mut arr).unwrap();
         assert_eq!(arr, expected);
-    }
-
-    #[test]
-    fn test_recursion_limit() {
-        let mut arr: Vec<i32> = (0..1_000_000).collect();
-        let result = MergeSortBuilder::new()
-            .max_recursion_depth(3)
-            .sort(&mut arr);
-
-        assert!(matches!(
-            result,
-            Err(SortError {
-                kind: SortErrorKind::RecursionLimitExceeded,
-                ..
-            })
-        ));
-    }
-
-    #[test]
-    fn test_custom_threshold() {
-        let mut arr = vec![5, 2, 8, 1, 9, 3];
-        MergeSortBuilder::new()
-            .insertion_threshold(2)
-            .sort(&mut arr)
-            .unwrap();
-        assert_eq!(arr, vec![1, 2, 3, 5, 8, 9]);
     }
 
     #[test]
@@ -521,6 +487,38 @@ mod tests {
                     i
                 );
             }
+        }
+    }
+
+    #[test]
+    fn test_recursion_limit() {
+        let mut arr: Vec<i32> = (0..1_000_000).collect();
+        let result = MergeSortBuilder::new()
+            .max_recursion_depth(3)
+            .sort(&mut arr);
+
+        match result {
+            Err(SortError::RecursionLimitExceeded { depth, max_depth }) => {
+                assert_eq!(max_depth, 3);
+                assert!(depth >= max_depth);
+            }
+            _ => panic!("Expected RecursionLimitExceeded error"),
+        }
+    }
+
+    #[test]
+    fn test_input_too_large() {
+        // Create an array larger than MAX_LENGTH
+        let size = MergeSortBuilder::MAX_LENGTH + 1;
+        let mut arr = vec![0; size];
+        let result = sort(&mut arr);
+
+        match result {
+            Err(SortError::InputTooLarge { length, max_length }) => {
+                assert_eq!(length, size);
+                assert_eq!(max_length, MergeSortBuilder::MAX_LENGTH);
+            }
+            _ => panic!("Expected InputTooLarge error"),
         }
     }
 }

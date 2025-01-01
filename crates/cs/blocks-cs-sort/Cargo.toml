@@ -8,6 +8,7 @@ repository.workspace = true
 
 [dependencies]
 rayon = "1.8"
+thiserror = "1.0"
 
 [dev-dependencies]
 proptest = "1.4"
