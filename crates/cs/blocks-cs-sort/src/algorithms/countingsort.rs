@@ -39,3 +39,161 @@ fn find_max(slice: &[u32]) -> u32 {
     // Implementation will be added later
     0
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_empty_slice() {
+        let mut arr: Vec<u32> = vec![];
+        sort(&mut arr);
+        assert_eq!(arr, vec![]);
+    }
+
+    #[test]
+    fn test_single_element() {
+        let mut arr = vec![1];
+        sort(&mut arr);
+        assert_eq!(arr, vec![1]);
+    }
+
+    #[test]
+    fn test_sorted_array() {
+        let mut arr = vec![1, 2, 3, 4, 5];
+        sort(&mut arr);
+        assert_eq!(arr, vec![1, 2, 3, 4, 5]);
+    }
+
+    #[test]
+    fn test_reverse_sorted() {
+        let mut arr = vec![5, 4, 3, 2, 1];
+        sort(&mut arr);
+        assert_eq!(arr, vec![1, 2, 3, 4, 5]);
+    }
+
+    #[test]
+    fn test_random_order() {
+        let mut arr = vec![3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5];
+        let mut expected = arr.clone();
+        expected.sort();
+        sort(&mut arr);
+        assert_eq!(arr, expected);
+    }
+
+    #[test]
+    fn test_duplicate_elements() {
+        let mut arr = vec![3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5];
+        let mut expected = arr.clone();
+        expected.sort();
+        sort(&mut arr);
+        assert_eq!(arr, expected);
+    }
+
+    #[test]
+    fn test_large_array() {
+        let mut arr: Vec<u32> = (0..1000).rev().collect();
+        let mut expected = arr.clone();
+        expected.sort();
+        sort(&mut arr);
+        assert_eq!(arr, expected);
+    }
+
+    #[test]
+    fn test_all_equal() {
+        // Test with an array where all elements are equal
+        let mut arr = vec![1, 1, 1, 1, 1];
+        sort(&mut arr);
+        assert_eq!(arr, vec![1, 1, 1, 1, 1]);
+    }
+
+    #[test]
+    fn test_sparse_array() {
+        // Test with an array that has large gaps between values
+        let mut arr = vec![2, 1000, 5, 20000, 3];
+        sort(&mut arr);
+        assert_eq!(arr, vec![2, 3, 5, 1000, 20000]);
+    }
+
+    #[test]
+    fn test_stability() {
+        // Test stability by sorting pairs and checking if relative order is preserved
+        #[derive(Debug, Clone, PartialEq)]
+        struct Pair {
+            key: u32,
+            original_index: usize,
+        }
+
+        let mut pairs = vec![
+            Pair { key: 1, original_index: 0 },
+            Pair { key: 1, original_index: 1 },
+            Pair { key: 2, original_index: 2 },
+            Pair { key: 2, original_index: 3 },
+        ];
+
+        let mut values: Vec<u32> = pairs.iter().map(|p| p.key).collect();
+        sort(&mut values);
+
+        // Create a mapping of sorted positions
+        let mut position_map = vec![0; pairs.len()];
+        let mut count = vec![0; 3]; // Count array for values 0-2
+
+        // Count frequencies
+        for &value in values.iter() {
+            count[value as usize] += 1;
+        }
+
+        // Calculate cumulative frequencies
+        for i in 1..count.len() {
+            count[i] += count[i - 1];
+        }
+
+        // Build position map
+        for pair in pairs.iter().rev() {
+            count[pair.key as usize] -= 1;
+            position_map[pair.original_index] = count[pair.key as usize];
+        }
+
+        // Verify that relative order is preserved for equal keys
+        for i in 0..pairs.len() - 1 {
+            for j in i + 1..pairs.len() {
+                if pairs[i].key == pairs[j].key {
+                    assert!(position_map[pairs[i].original_index] < position_map[pairs[j].original_index],
+                        "Stability violated for equal elements at original positions {} and {}",
+                        pairs[i].original_index, pairs[j].original_index);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_zero_and_max() {
+        // Test with array containing zero and maximum u32 values
+        let mut arr = vec![0, u32::MAX, 5, u32::MAX - 1, 0];
+        sort(&mut arr);
+        assert_eq!(arr, vec![0, 0, 5, u32::MAX - 1, u32::MAX]);
+    }
+
+    #[test]
+    fn test_find_max() {
+        assert_eq!(find_max(&[1, 5, 3, 9, 2]), 9);
+        assert_eq!(find_max(&[1]), 1);
+        assert_eq!(find_max(&[u32::MAX, 0, 5]), u32::MAX);
+    }
+
+    #[test]
+    fn test_small_range() {
+        // Test with small range of values (good case for counting sort)
+        let mut arr = vec![2, 1, 0, 2, 1, 0, 1, 2];
+        sort(&mut arr);
+        assert_eq!(arr, vec![0, 0, 1, 1, 1, 2, 2, 2]);
+    }
+
+    #[test]
+    fn test_large_range() {
+        // Test with large range but few unique values
+        let mut arr = vec![0, 1000000, 0, 1000000, 0];
+        sort(&mut arr);
+        assert_eq!(arr, vec![0, 0, 0, 1000000, 1000000]);
+    }
+}
