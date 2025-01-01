@@ -6,4 +6,19 @@ authors.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[features]
+default = []
+parallel = ["rayon"]
+simd = ["wide"]
+
 [dependencies]
+rayon = { version = "1.10", optional = true }
+wide = { version = "0.7.3", optional = true }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+rand = "0.8"
+
+[[bench]]
+name = "heapsort_benchmarks"
+harness = false
