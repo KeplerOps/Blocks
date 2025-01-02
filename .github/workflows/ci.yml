@@ -1,0 +1,46 @@
+
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - chore/basic-ci-cd
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+    - name: Install dependencies
+      run: sudo apt-get install lcov
+    - name: Run tests
+      run: |
+        cargo test --manifest-path crates/cs/Cargo.toml
+    - name: Generate coverage report
+      run: |
+        cargo install cargo-llvm-cov
+        for toml in $(find crates/cs -name "Cargo.toml"); do
+          echo "Running tests for $toml"
+          cargo llvm-cov --manifest-path $toml --lcov --output-path lcov.info
+        done
+    - name: Check coverage
+      run: |
+        bash <(curl -s https://codecov.io/bash) -f lcov.info
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    - name: Fail if coverage is below 90%
+      run: |
+        bash <(curl -s https://codecov.io/bash) -f lcov.info
+        if [ $(lcov --summary lcov.info | grep -Eo '[0-9]+\.[0-9]+' | head -1) -lt 90 ]; then
+          echo "Coverage is below 90%";
+          exit 1;
+        fi
