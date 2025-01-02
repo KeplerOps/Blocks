@@ -22,3 +22,7 @@ rand = "0.8"
 [[bench]]
 name = "heapsort_benchmarks"
 harness = false
+
+[[bench]]
+name = "quicksort_benchmarks"
+harness = false
