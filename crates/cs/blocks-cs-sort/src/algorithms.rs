@@ -1,7 +1,57 @@
-// Sorting algorithms
-pub mod quicksort;
-pub mod mergesort;
 
-// Re-export commonly used functions for convenience
+/*!
+This module provides a collection of sorting algorithms with different performance characteristics
+and trade-offs. Each algorithm is implemented with a focus on performance, safety, and usability.
+
+# Available Algorithms
+
+## QuickSort
+A divide-and-conquer algorithm that offers excellent average-case performance and in-place sorting.
+- Average case: O(n log n)
+- Worst case: O(n²)
+- Space: O(log n)
+- Not stable
+- In-place sorting
+
+## HeapSort
+A comparison-based algorithm using a binary heap data structure, offering consistent performance.
+- Time: O(n log n) for all cases
+- Space: O(1)
+- Not stable
+- In-place sorting
+
+# Feature Flags
+- `parallel`: Enables parallel sorting for large arrays
+- `simd`: Enables SIMD optimizations for numeric types
+
+# Examples
+```rust
+use blocks_cs_sort::algorithms::{quicksort, heapsort};
+
+// Using QuickSort
+let mut numbers = vec![3, 1, 4, 1, 5, 9];
+quicksort(&mut numbers);
+assert_eq!(numbers, vec![1, 1, 3, 4, 5, 9]);
+
+// Using HeapSort
+let mut numbers = vec![3, 1, 4, 1, 5, 9];
+heapsort(&mut numbers).expect("Sort should succeed");
+assert_eq!(numbers, vec![1, 1, 3, 4, 5, 9]);
+```
+*/
+
+pub mod quicksort;
+pub mod heapsort;
+
+/// Re-export of [`quicksort::sort`].
+/// 
+/// Provides an efficient, in-place quicksort implementation with O(n log n) average-case complexity.
+/// This implementation uses median-of-three pivot selection and switches to insertion sort for small arrays.
 pub use self::quicksort::sort as quicksort;
-pub use self::mergesort::sort as mergesort;
+
+/// Re-export of [`heapsort::sort`].
+/// 
+/// Provides a heap-based sorting implementation with guaranteed O(n log n) complexity and O(1) space usage.
+/// This implementation supports parallel sorting for large arrays when the `parallel` feature is enabled.
+pub use self::heapsort::sort as heapsort;
+
