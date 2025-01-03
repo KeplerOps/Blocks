@@ -11,7 +11,8 @@ Each algorithm is implemented with a focus on:
 # Available Algorithms
 
 ## Comparison Sorts
-- [QuickSort](algorithms/quicksort/index.html): An efficient, in-place sorting algorithm with O(n log n) average case complexity
+- [`QuickSort`](mod@algorithms::quicksort): An efficient, in-place sorting algorithm with O(n log n) average case complexity
+- [`HeapSort`](mod@algorithms::heapsort): A heap-based sorting algorithm with guaranteed O(n log n) complexity
 
 # Usage Example
 
