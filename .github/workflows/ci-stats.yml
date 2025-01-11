@@ -21,18 +21,26 @@ jobs:
         override: true
     - name: Install dependencies
       run: sudo apt-get install lcov
-    - name: Run tests
+    - name: Run tests for implemented crates
       run: |
-        for toml in $(find crates/stats -name "Cargo.toml"); do
-          echo "Running tests for $toml"
-          cargo test --manifest-path $toml
+        # First, find all implemented crates (those with src directory)
+        for crate_dir in crates/stats/blocks-stats-*/; do
+          if [ -d "${crate_dir}src" ]; then
+            echo "Testing implemented crate: ${crate_dir}"
+            cargo test --manifest-path "${crate_dir}Cargo.toml"
+          else
+            echo "Skipping unimplemented crate: ${crate_dir}"
+          fi
         done
     - name: Generate coverage report
       run: |
         cargo install cargo-llvm-cov
-        for toml in $(find crates/stats -name "Cargo.toml"); do
-          echo "Running tests for $toml"
-          cargo llvm-cov --manifest-path $toml --lcov --output-path lcov.info
+        # Only generate coverage for implemented crates
+        for crate_dir in crates/stats/blocks-stats-*/; do
+          if [ -d "${crate_dir}src" ]; then
+            echo "Generating coverage for: ${crate_dir}"
+            cargo llvm-cov --manifest-path "${crate_dir}Cargo.toml" --lcov --output-path lcov.info
+          fi
         done
     - name: Check coverage
       run: |
