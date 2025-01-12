@@ -7,3 +7,10 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "binary_search_benchmarks"
+harness = false

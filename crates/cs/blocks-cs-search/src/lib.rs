@@ -1,3 +1,7 @@
+mod binary_search;
+
+pub use binary_search::binary_search;
+
 pub fn add(left: u64, right: u64) -> u64 {
     left + right
 }
