@@ -1,6 +1,6 @@
-mod binary_search;
+mod algorithms;
 
-pub use binary_search::binary_search;
+pub use algorithms::binary_search;
 
 pub fn add(left: u64, right: u64) -> u64 {
     left + right

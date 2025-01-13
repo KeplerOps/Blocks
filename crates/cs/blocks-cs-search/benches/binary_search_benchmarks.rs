@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion, BatchSize};
-use blocks_cs_search::binary_search::binary_search;
+use blocks_cs_search::algorithms::binary_search;
 mod common;
 use common::{generate_data, SIZES, DISTRIBUTIONS};
 

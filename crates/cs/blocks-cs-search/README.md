@@ -13,7 +13,7 @@ A collection of high-performance search algorithms implemented in Rust.
 Basic usage:
 
 ```rust
-use blocks_cs_search::binary_search::binary_search;
+use blocks_cs_search::algorithms::binary_search;
 // Using binary search
 let arr = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 assert_eq!(binary_search(&arr, 5), Some(4));
