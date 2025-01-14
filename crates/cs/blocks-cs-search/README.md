@@ -30,9 +30,10 @@ This crate provides implementations of various search algorithms in Rust.
    - Time Complexity: O(√n)
    - Status: Implemented with optimal jump size calculation
 
-6. Exponential Search  
+6. Exponential Search ✅
    - Also known as doubling or galloping search
-   - Time Complexity: O(log n)
+   - Time Complexity: O(log p) where p is target position
+   - Status: Implemented with binary search range optimization
 
 7. Fibonacci Search  
    - Uses Fibonacci numbers to divide search space
