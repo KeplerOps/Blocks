@@ -15,9 +15,10 @@ This crate provides implementations of various search algorithms in Rust.
    - Time Complexity: O(log n)
    - Status: Implemented with sorted input validation
 
-3. Ternary Search  
+3. Ternary Search ✅
    - Divides array into three parts
    - Time Complexity: O(log₃ n)
+   - Status: Implemented with sorted input validation
 
 4. Interpolation Search  
    - Improved variant of binary search for uniformly distributed data
