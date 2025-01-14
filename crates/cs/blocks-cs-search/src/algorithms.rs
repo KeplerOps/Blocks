@@ -45,6 +45,7 @@ pub mod binary;
 pub mod ternary;
 pub mod interpolation;
 pub mod jump;
+pub mod exponential;
 
 /// Re-export of [`linear::search`].
 /// 
@@ -76,3 +77,10 @@ pub use self::interpolation::search as interpolation_search;
 /// Provides a jump search implementation with O(√n) complexity.
 /// This implementation requires sorted input and works with any type that implements Ord.
 pub use self::jump::search as jump_search;
+
+/// Re-export of [`exponential::search`].
+/// 
+/// Provides an exponential (doubling) search implementation with O(log p) complexity,
+/// where p is the position of the target. This implementation requires sorted input
+/// and works with any type that implements Ord.
+pub use self::exponential::search as exponential_search;
