@@ -13,12 +13,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Rust
-      uses: actions-rs/toolchain@v1
+    - uses: actions/checkout@v3
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
       with:
-        toolchain: stable
-        override: true
+        components: llvm-tools-preview
+    - name: Install cargo-llvm-cov
+      uses: taiki-e/install-action@cargo-llvm-cov
     - name: Install dependencies
       run: sudo apt-get install lcov
     - name: Run tests for implemented crates
@@ -34,7 +35,6 @@ jobs:
         done
     - name: Generate coverage report
       run: |
-        cargo install cargo-llvm-cov
         # Only generate coverage for implemented crates
         for crate_dir in crates/cs/blocks-cs-*/; do
           if [ -d "${crate_dir}src" ]; then
