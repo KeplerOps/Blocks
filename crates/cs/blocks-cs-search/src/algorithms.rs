@@ -49,6 +49,7 @@ pub mod exponential;
 pub mod fibonacci;
 pub mod sublist;
 pub mod dfs;
+pub mod bfs;
 
 /// Re-export of [`linear::search`].
 /// 
@@ -108,5 +109,6 @@ pub use self::sublist::search as sublist_search;
 /// implements PartialEq.
 pub use self::sublist::search_kmp as sublist_search_kmp;
 
-// Re-export Graph type for DFS
-pub use self::dfs::Graph;
+// Re-export Graph types for graph algorithms
+pub use self::dfs::Graph as DfsGraph;
+pub use self::bfs::Graph as BfsGraph;
