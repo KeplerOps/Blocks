@@ -46,6 +46,7 @@ pub mod ternary;
 pub mod interpolation;
 pub mod jump;
 pub mod exponential;
+pub mod fibonacci;
 
 /// Re-export of [`linear::search`].
 /// 
@@ -84,3 +85,10 @@ pub use self::jump::search as jump_search;
 /// where p is the position of the target. This implementation requires sorted input
 /// and works with any type that implements Ord.
 pub use self::exponential::search as exponential_search;
+
+/// Re-export of [`fibonacci::search`].
+/// 
+/// Provides a Fibonacci search implementation with O(log n) complexity.
+/// Uses Fibonacci numbers for division, resulting in fewer comparisons than binary search.
+/// This implementation requires sorted input and works with any type that implements Ord.
+pub use self::fibonacci::search as fibonacci_search;
