@@ -41,9 +41,16 @@ if let Ok(Some(index)) = binary::search(&sorted, &target) {
 */
 
 pub mod linear;
+pub mod binary;
 
 /// Re-export of [`linear::search`].
 /// 
 /// Provides a simple linear search implementation with O(n) complexity.
 /// This implementation works with any type that implements PartialEq.
 pub use self::linear::search as linear_search;
+
+/// Re-export of [`binary::search`].
+/// 
+/// Provides an efficient binary search implementation with O(log n) complexity.
+/// This implementation requires sorted input and works with any type that implements Ord.
+pub use self::binary::search as binary_search;
