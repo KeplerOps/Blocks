@@ -48,6 +48,7 @@ pub mod jump;
 pub mod exponential;
 pub mod fibonacci;
 pub mod sublist;
+pub mod dfs;
 
 /// Re-export of [`linear::search`].
 /// 
@@ -106,3 +107,6 @@ pub use self::sublist::search as sublist_search;
 /// with O(m + n) complexity. This implementation works with any type that
 /// implements PartialEq.
 pub use self::sublist::search_kmp as sublist_search_kmp;
+
+// Re-export Graph type for DFS
+pub use self::dfs::Graph;
