@@ -43,6 +43,7 @@ if let Ok(Some(index)) = binary::search(&sorted, &target) {
 pub mod linear;
 pub mod binary;
 pub mod ternary;
+pub mod interpolation;
 
 /// Re-export of [`linear::search`].
 /// 
@@ -61,3 +62,10 @@ pub use self::binary::search as binary_search;
 /// Provides a ternary search implementation with O(log₃ n) complexity.
 /// This implementation requires sorted input and works with any type that implements Ord.
 pub use self::ternary::search as ternary_search;
+
+/// Re-export of [`interpolation::search`].
+/// 
+/// Provides an interpolation search implementation with O(log log n) average case complexity
+/// for uniformly distributed data. This implementation requires sorted input and works with
+/// any type that implements Ord + ToPrimitive.
+pub use self::interpolation::search as interpolation_search;
