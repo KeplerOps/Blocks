@@ -58,7 +58,9 @@ assert_eq!(numbers, vec![1, 1, 3, 4, 5, 9]);
 
 // Using ShellSort
 
-//Using CountingSort
+// Using CountingSort
+
+// Using RadixSort
 ```
 */
 
@@ -70,6 +72,7 @@ pub mod insertionsort;
 pub mod selectionsort;
 pub mod shellsort;
 pub mod countingsort;
+pub mod radixsort;
 
 /// Re-export of [`quicksort::sort`].
 /// 
@@ -99,3 +102,5 @@ pub use self::selectionsort::sort as selectionsort;
 pub use self::shellsort::sort as shellsort;
 
 pub use self::countingsort::sort as countingsort;
+
+pub use self::radixsort::sort as radixsort;
