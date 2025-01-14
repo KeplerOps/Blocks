@@ -46,9 +46,10 @@ This crate provides implementations of various search algorithms in Rust.
    - Status: Implemented with KMP optimization
 
 ### Graph/Tree Search Algorithms
-9. Depth-First Search (DFS)  
+9. Depth-First Search (DFS) ✅
    - Explores as far as possible along each branch
    - Time Complexity: O(V + E) where V is vertices and E is edges
+   - Status: Implemented with both recursive and iterative approaches
 
 10. Breadth-First Search (BFS)  
     - Explores all vertices at present depth before moving to next level
