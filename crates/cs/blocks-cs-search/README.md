@@ -40,9 +40,10 @@ This crate provides implementations of various search algorithms in Rust.
    - Time Complexity: O(log n)
    - Status: Implemented with optimized comparison count
 
-8. Sublist Search  
+8. Sublist Search ✅
    - Search for a sublist within a list
-   - Time Complexity: O(m×n) where m and n are lengths of lists
+   - Time Complexity: O(m×n) naive, O(m + n) with KMP
+   - Status: Implemented with KMP optimization
 
 ### Graph/Tree Search Algorithms
 9. Depth-First Search (DFS)  
