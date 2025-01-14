@@ -44,6 +44,7 @@ pub mod linear;
 pub mod binary;
 pub mod ternary;
 pub mod interpolation;
+pub mod jump;
 
 /// Re-export of [`linear::search`].
 /// 
@@ -69,3 +70,9 @@ pub use self::ternary::search as ternary_search;
 /// for uniformly distributed data. This implementation requires sorted input and works with
 /// any type that implements Ord + ToPrimitive.
 pub use self::interpolation::search as interpolation_search;
+
+/// Re-export of [`jump::search`].
+/// 
+/// Provides a jump search implementation with O(√n) complexity.
+/// This implementation requires sorted input and works with any type that implements Ord.
+pub use self::jump::search as jump_search;
