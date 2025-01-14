@@ -53,6 +53,7 @@ assert_eq!(numbers, vec![1, 1, 3, 4, 5, 9]);
 */
 
 pub mod quicksort;
+pub mod bubblesort;
 pub mod heapsort;
 pub mod mergesort;
 
@@ -73,3 +74,6 @@ pub use self::heapsort::sort as heapsort;
 /// Provides a stable sorting implementation with guaranteed O(n log n) complexity.
 /// This implementation uses O(n) auxiliary space to achieve stability.
 pub use self::mergesort::sort as mergesort;
+
+// TODO
+pub use self::bubblesort::sort as bubblesort;
