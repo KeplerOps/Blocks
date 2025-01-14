@@ -49,13 +49,18 @@ assert_eq!(numbers, vec![1, 1, 3, 4, 5, 9]);
 let mut numbers = vec![3, 1, 4, 1, 5, 9];
 mergesort(&mut numbers);
 assert_eq!(numbers, vec![1, 1, 3, 4, 5, 9]);
+
+// Using BubbleSort
+
+// Using InsertionSort
 ```
 */
 
 pub mod quicksort;
-pub mod bubblesort;
 pub mod heapsort;
 pub mod mergesort;
+pub mod bubblesort;
+pub mod insertionsort;
 
 /// Re-export of [`quicksort::sort`].
 /// 
@@ -77,3 +82,5 @@ pub use self::mergesort::sort as mergesort;
 
 // TODO
 pub use self::bubblesort::sort as bubblesort;
+
+pub use self::insertionsort::sort as insertionsort;
