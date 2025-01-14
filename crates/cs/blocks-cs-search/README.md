@@ -10,9 +10,10 @@ This crate provides implementations of various search algorithms in Rust.
    - Time Complexity: O(n) for small datasets, O(n/t) for large datasets with parallel search
    - Status: Implemented with parallel optimization
 
-2. Binary Search  
+2. Binary Search ✅
    - Efficient search algorithm for sorted arrays
    - Time Complexity: O(log n)
+   - Status: Implemented with sorted input validation
 
 3. Ternary Search  
    - Divides array into three parts
