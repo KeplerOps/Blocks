@@ -47,6 +47,7 @@ pub mod interpolation;
 pub mod jump;
 pub mod exponential;
 pub mod fibonacci;
+pub mod sublist;
 
 /// Re-export of [`linear::search`].
 /// 
@@ -92,3 +93,16 @@ pub use self::exponential::search as exponential_search;
 /// Uses Fibonacci numbers for division, resulting in fewer comparisons than binary search.
 /// This implementation requires sorted input and works with any type that implements Ord.
 pub use self::fibonacci::search as fibonacci_search;
+
+/// Re-export of [`sublist::search`].
+/// 
+/// Provides a naive sublist search implementation with O(m×n) complexity.
+/// This implementation works with any type that implements PartialEq.
+pub use self::sublist::search as sublist_search;
+
+/// Re-export of [`sublist::search_kmp`].
+/// 
+/// Provides an optimized KMP (Knuth-Morris-Pratt) sublist search implementation
+/// with O(m + n) complexity. This implementation works with any type that
+/// implements PartialEq.
+pub use self::sublist::search_kmp as sublist_search_kmp;
