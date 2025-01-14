@@ -42,6 +42,7 @@ if let Ok(Some(index)) = binary::search(&sorted, &target) {
 
 pub mod linear;
 pub mod binary;
+pub mod ternary;
 
 /// Re-export of [`linear::search`].
 /// 
@@ -54,3 +55,9 @@ pub use self::linear::search as linear_search;
 /// Provides an efficient binary search implementation with O(log n) complexity.
 /// This implementation requires sorted input and works with any type that implements Ord.
 pub use self::binary::search as binary_search;
+
+/// Re-export of [`ternary::search`].
+/// 
+/// Provides a ternary search implementation with O(log₃ n) complexity.
+/// This implementation requires sorted input and works with any type that implements Ord.
+pub use self::ternary::search as ternary_search;
