@@ -1,4 +1,5 @@
 [workspace]
+resolver = "2"
 members = [
     "crates/shared/blocks-core",
     "crates/shared/blocks-utils",
@@ -48,11 +49,10 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.0-alpha.1"
 edition = "2021"
 authors = ["Brad Edwards <brad@keplerops.com>"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/atomiklabs/blocks"
-resolver = "2"
 
 [workspace.dependencies]

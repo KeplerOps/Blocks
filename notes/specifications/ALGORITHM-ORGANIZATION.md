@@ -4,31 +4,34 @@ This document defines the organizational structure of algorithm crates within th
 
 ## Table of Contents
 
-1. [Domain Categories](#domain-categories)
-    - [Computer Science (`blocks-cs`)](#computer-science-blockscs)
-        - [Core Algorithms & Data Structures](#core-algorithms--data-structures)
-        - [Systems & Distributed](#systems--distributed)
-        - [Security & Data](#security--data)
-        - [Specialized CS](#specialized-cs)
-    - [Mathematics (`blocks-math`)](#mathematics-blocksmath)
-        - [Core Mathematical Algorithms](#core-mathematical-algorithms)
-        - [Optimization & Logic](#optimization--logic)
-    - [Statistics (`blocks-stats`)](#statistics-blocksstats)
-        - [Core Statistics](#core-statistics)
-    - [Machine Learning (`blocks-ml`)](#machine-learning-blocksml)
-        - [Classical ML](#classical-ml)
-        - [Deep Learning & Neural Nets](#deep-learning--neural-nets)
-        - [Applied ML](#applied-ml)
-2. [Cross-Domain Considerations](#cross-domain-considerations)
+- [Algorithm Ecosystem Organization](#algorithm-ecosystem-organization)
+  - [Table of Contents](#table-of-contents)
+  - [Domain Categories](#domain-categories)
+    - [Computer Science (`blocks-cs`)](#computer-science-blocks-cs)
+      - [Core Algorithms \& Data Structures](#core-algorithms--data-structures)
+      - [Systems \& Distributed](#systems--distributed)
+      - [Security \& Data](#security--data)
+      - [Specialized CS](#specialized-cs)
+    - [Mathematics (`blocks-math`)](#mathematics-blocks-math)
+      - [Core Mathematical Algorithms](#core-mathematical-algorithms)
+      - [Optimization \& Logic](#optimization--logic)
+    - [Statistics (`blocks-stats`)](#statistics-blocks-stats)
+      - [Core Statistics](#core-statistics)
+    - [Machine Learning (`blocks-ml`)](#machine-learning-blocks-ml)
+      - [Classical ML](#classical-ml)
+      - [Deep Learning \& Neural Nets](#deep-learning--neural-nets)
+      - [Applied ML](#applied-ml)
+  - [Cross-Domain Considerations](#cross-domain-considerations)
     - [Placement Criteria](#placement-criteria)
     - [Inter-Domain Dependencies](#inter-domain-dependencies)
-3. [Adding New Algorithms](#adding-new-algorithms)
-4. [Naming Conventions](#naming-conventions)
-5. [Documentation Standards](#documentation-standards)
-6. [Dependency Management](#dependency-management)
-7. [Versioning and Compatibility](#versioning-and-compatibility)
-8. [Examples](#examples)
-9. [Guidelines for Maintaining Consistency](#guidelines-for-maintaining-consistency)
+  - [Adding New Algorithms](#adding-new-algorithms)
+  - [Naming Conventions](#naming-conventions)
+  - [Documentation Standards](#documentation-standards)
+  - [Dependency Management](#dependency-management)
+  - [Versioning and Compatibility](#versioning-and-compatibility)
+  - [Examples](#examples)
+  - [Guidelines for Maintaining Consistency](#guidelines-for-maintaining-consistency)
+  - [Conclusion](#conclusion)
 
 ---
 
@@ -243,87 +246,87 @@ When incorporating new algorithms into the ecosystem, follow these guidelines to
 Consistent naming conventions enhance readability and discoverability across the ecosystem.
 
 - **Crate Names**:
-    - Prefix with `blocks-` followed by the primary domain and specific functionality.
-    - Use descriptive, kebab-case names reflecting the primary function (e.g., `blocks-cs-sort`, `blocks-math-num`).
+  - Prefix with `blocks-` followed by the primary domain and specific functionality.
+  - Use descriptive, kebab-case names reflecting the primary function (e.g., `blocks-cs-sort`, `blocks-math-num`).
 
 - **Module Names**:
-    - Use snake_case within crates to maintain Rust idiomatic standards.
-    - Reflect the functionality and maintain clarity (e.g., `quick_sort`, `adam_optimizer`).
+  - Use snake_case within crates to maintain Rust idiomatic standards.
+  - Reflect the functionality and maintain clarity (e.g., `quick_sort`, `adam_optimizer`).
 
 - **Trait and Struct Names**:
-    - Use PascalCase for traits and structs, ensuring names are clear and expressive (e.g., `Algorithm`, `WeightedGraph`).
+  - Use PascalCase for traits and structs, ensuring names are clear and expressive (e.g., `Algorithm`, `WeightedGraph`).
 
 ## Documentation Standards
 
 High-quality documentation is crucial for usability and maintainability.
 
 - **Rustdoc Comments**:
-    - Use idiomatic Rustdoc comments (`///`) for all public functions, structs, enums, and traits.
-    - Include sections like `Overview`, `Examples`, `Parameters`, `Returns`, and `Errors`.
+  - Use idiomatic Rustdoc comments (`///`) for all public functions, structs, enums, and traits.
+  - Include sections like `Overview`, `Examples`, `Parameters`, `Returns`, and `Errors`.
 
 - **Plain-Language Descriptions**:
-    - Provide accessible explanations of each algorithm’s purpose and common use cases.
+  - Provide accessible explanations of each algorithm’s purpose and common use cases.
 
 - **Pseudocode in Comments**:
-    - Include standardized pseudocode within comments to illustrate core algorithm steps.
+  - Include standardized pseudocode within comments to illustrate core algorithm steps.
 
 - **Complexity Analysis**:
-    - Document time and space complexity (best, worst, average cases) for each algorithm.
+  - Document time and space complexity (best, worst, average cases) for each algorithm.
 
 - **Consistent Documentation Structure**:
-    - Maintain uniform sections across all modules, traits, and functions to facilitate ease of understanding.
+  - Maintain uniform sections across all modules, traits, and functions to facilitate ease of understanding.
 
 ## Dependency Management
 
 Efficient dependency management ensures modularity and minimizes potential conflicts.
 
 - **Minimal Shared Dependencies**:
-    - Crates should primarily depend on `blocks-core` and their respective domain-specific core crates to avoid redundancy.
+  - Crates should primarily depend on `blocks-core` and their respective domain-specific core crates to avoid redundancy.
 
 - **Cargo Feature Flags**:
-    - Utilize feature flags to manage optional capabilities and dependencies, ensuring flexibility and performance optimization.
+  - Utilize feature flags to manage optional capabilities and dependencies, ensuring flexibility and performance optimization.
 
 - **Inter-Crate Dependencies**:
-    - Clearly define and document dependencies between crates to maintain clarity and prevent circular dependencies.
+  - Clearly define and document dependencies between crates to maintain clarity and prevent circular dependencies.
 
 ## Versioning and Compatibility
 
 Adhering to semantic versioning maintains compatibility and predictability for users.
 
 - **Semantic Versioning**:
-    - Follow semantic versioning (`MAJOR.MINOR.PATCH`) to indicate breaking changes, new features, and patches.
+  - Follow semantic versioning (`MAJOR.MINOR.PATCH`) to indicate breaking changes, new features, and patches.
 
 - **API Stability**:
-    - Ensure APIs remain stable across minor versions, introducing breaking changes only in major version increments.
+  - Ensure APIs remain stable across minor versions, introducing breaking changes only in major version increments.
 
 - **Deprecation Policies**:
-    - Mark deprecated features clearly in documentation and provide migration paths, adhering to the deprecation timeline specified in `REQUIREMENTS.md`.
+  - Mark deprecated features clearly in documentation and provide migration paths, adhering to the deprecation timeline specified in `REQUIREMENTS.md`.
 
 ## Examples
 
 Providing practical examples aids developers in understanding and utilizing the crates effectively.
 
 - **Usage Examples**:
-    - Include example code snippets demonstrating common use cases and best practices within Rust’s documentation.
+  - Include example code snippets demonstrating common use cases and best practices within Rust’s documentation.
 
 - **Integration Examples**:
-    - Showcase how different crates can be composed to solve complex problems, emphasizing composability and interoperability.
+  - Showcase how different crates can be composed to solve complex problems, emphasizing composability and interoperability.
 
 ## Guidelines for Maintaining Consistency
 
 Consistency across the ecosystem fosters a seamless development experience and reduces onboarding friction.
 
 - **Coding Standards**:
-    - Adhere to Rust’s official style guidelines (`rustfmt`) and enforce linting rules (`Clippy`) to maintain code quality.
+  - Adhere to Rust’s official style guidelines (`rustfmt`) and enforce linting rules (`Clippy`) to maintain code quality.
 
 - **Documentation Practices**:
-    - Follow standardized documentation structures and conventions to ensure uniformity and ease of navigation.
+  - Follow standardized documentation structures and conventions to ensure uniformity and ease of navigation.
 
 - **Testing Protocols**:
-    - Implement consistent testing patterns across crates, including unit tests, integration tests, benchmarks, and fuzz tests where applicable.
+  - Implement consistent testing patterns across crates, including unit tests, integration tests, benchmarks, and fuzz tests where applicable.
 
 - **Contribution Guidelines**:
-    - Clearly outline contribution procedures, coding standards, and review processes to maintain high-quality code contributions and collaborative development.
+  - Clearly outline contribution procedures, coding standards, and review processes to maintain high-quality code contributions and collaborative development.
 
 ---
 
