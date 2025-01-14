@@ -20,9 +20,10 @@ This crate provides implementations of various search algorithms in Rust.
    - Time Complexity: O(log₃ n)
    - Status: Implemented with sorted input validation
 
-4. Interpolation Search  
+4. Interpolation Search ✅
    - Improved variant of binary search for uniformly distributed data
    - Time Complexity: O(log log n) average case, O(n) worst case
+   - Status: Implemented with distribution-aware optimization
 
 5. Jump Search  
    - Block-jumping search algorithm
