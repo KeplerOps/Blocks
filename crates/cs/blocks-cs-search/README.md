@@ -25,9 +25,10 @@ This crate provides implementations of various search algorithms in Rust.
    - Time Complexity: O(log log n) average case, O(n) worst case
    - Status: Implemented with distribution-aware optimization
 
-5. Jump Search  
+5. Jump Search ✅
    - Block-jumping search algorithm
    - Time Complexity: O(√n)
+   - Status: Implemented with optimal jump size calculation
 
 6. Exponential Search  
    - Also known as doubling or galloping search
