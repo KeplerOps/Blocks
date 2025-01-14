@@ -84,10 +84,11 @@ This **Requirements Specification** covers a **Rust-based ecosystem** of crates 
 #### 1.6.6 Standardized Testing Patterns
 
 - **FR1.6.6** All crates **SHALL** organize tests into:
-    - `src/` for core implementations,
-    - `tests/` for integration,
-    - `benches/` for benchmarks (using `criterion` or similar),
-    - `fuzz/` for fuzz targets (if applicable).
+
+- `src/` for core implementations,
+- `tests/` for integration,
+- `benches/` for benchmarks (using `criterion` or similar),
+- `fuzz/` for fuzz targets (if applicable).
 
 #### 1.6.7 Shared Test Data
 
@@ -101,12 +102,14 @@ This **Requirements Specification** covers a **Rust-based ecosystem** of crates 
 
 - **FR1.7.1** All major functions and data types **SHALL** have **Rustdoc** comments in an **idiomatic** style (triple slash `///`).
 - **FR1.7.2** **Pseudo-code** or stepwise logic in comments **SHALL** follow a **standard format**, for example:
-    ```
+
+    ```plainttext
     // PSEUDO:
     // 1. Initialize distance array
     // 2. Relax edges in a loop
     // 3. Check for negative cycles
     ```
+
 - **FR1.7.3** **Unsafe code** usage or reliance on "core library unsafe" internals **SHALL** be explicitly noted with clear rationale in comments.
 - **FR1.7.4** Crate names **SHALL** be concise and descriptive, using shortened forms where appropriate (e.g., `sort` instead of `sorting`, `search` instead of `searching`).
 
@@ -267,9 +270,3 @@ This **Requirements Specification** covers a **Rust-based ecosystem** of crates 
 
 10. **Curated High-Quality Components:**
     - Focus on providing a curated set of exceptionally well-implemented algorithms and data structures, prioritizing quality and reliability over simply maximizing the number of components.
-
----
-
-## 4. Conclusion
-
-By **incorporating** the above **functional** and **non-functional** requirements—plus newly added items addressing licensing, supply chain, HPC/distributed error handling, extended testing patterns, uniform error/logging design, **consistent documentation patterns**, and **workspace-level concerns**—this specification achieves an **exacting** standard. It is now suitable for a **Rust algorithm ecosystem** that aspires to **Clean Code**, **Clean Architecture**, **industrial-grade** reliability, and **safety-critical** rigor. This ecosystem will serve as a foundation for building robust and efficient software, including **AI-driven systems**, by providing **composable and high-quality building blocks**. A **principal engineer** can confidently proceed with **crate layout**, **module structuring**, **API design**, and **implementation** guided by these comprehensive requirements.
