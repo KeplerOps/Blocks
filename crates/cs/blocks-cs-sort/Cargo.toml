@@ -14,8 +14,11 @@ simd = ["wide"]
 [dependencies]
 rayon = { version = "1.10", optional = true }
 wide = { version = "0.7.3", optional = true }
+thiserror = "1.0"
+static_assertions = "1.1"
 
 [dev-dependencies]
+proptest = "1.4"
 criterion = { version = "0.5", features = ["html_reports"] }
 rand = "0.8"
 
@@ -25,4 +28,8 @@ harness = false
 
 [[bench]]
 name = "quicksort_benchmarks"
+harness = false
+
+[[bench]]
+name = "mergesort_benchmarks"
 harness = false

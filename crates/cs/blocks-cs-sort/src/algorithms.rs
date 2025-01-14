@@ -1,3 +1,4 @@
+
 /*!
 This module provides a collection of sorting algorithms with different performance characteristics
 and trade-offs. Each algorithm is implemented with a focus on performance, safety, and usability.
@@ -19,6 +20,13 @@ A comparison-based algorithm using a binary heap data structure, offering consis
 - Not stable
 - In-place sorting
 
+## MergeSort
+A divide-and-conquer algorithm that guarantees stability and consistent performance.
+- Time: O(n log n) for all cases
+- Space: O(n)
+- Stable
+- Not in-place sorting
+
 # Feature Flags
 - `parallel`: Enables parallel sorting for large arrays
 - `simd`: Enables SIMD optimizations for numeric types
@@ -36,11 +44,17 @@ assert_eq!(numbers, vec![1, 1, 3, 4, 5, 9]);
 let mut numbers = vec![3, 1, 4, 1, 5, 9];
 heapsort(&mut numbers).expect("Sort should succeed");
 assert_eq!(numbers, vec![1, 1, 3, 4, 5, 9]);
+
+// Using MergeSort
+let mut numbers = vec![3, 1, 4, 1, 5, 9];
+mergesort(&mut numbers);
+assert_eq!(numbers, vec![1, 1, 3, 4, 5, 9]);
 ```
 */
 
 pub mod quicksort;
 pub mod heapsort;
+pub mod mergesort;
 
 /// Re-export of [`quicksort::sort`].
 /// 
@@ -53,3 +67,9 @@ pub use self::quicksort::sort as quicksort;
 /// Provides a heap-based sorting implementation with guaranteed O(n log n) complexity and O(1) space usage.
 /// This implementation supports parallel sorting for large arrays when the `parallel` feature is enabled.
 pub use self::heapsort::sort as heapsort;
+
+/// Re-export of [`mergesort::sort`].
+/// 
+/// Provides a stable sorting implementation with guaranteed O(n log n) complexity.
+/// This implementation uses O(n) auxiliary space to achieve stability.
+pub use self::mergesort::sort as mergesort;
