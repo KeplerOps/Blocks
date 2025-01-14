@@ -55,6 +55,8 @@ assert_eq!(numbers, vec![1, 1, 3, 4, 5, 9]);
 // Using InsertionSort
 
 // Using SelectionSort
+
+// Using ShellSort
 ```
 */
 
@@ -64,6 +66,7 @@ pub mod mergesort;
 pub mod bubblesort;
 pub mod insertionsort;
 pub mod selectionsort;
+pub mod shellsort;
 
 /// Re-export of [`quicksort::sort`].
 /// 
@@ -89,3 +92,5 @@ pub use self::bubblesort::sort as bubblesort;
 pub use self::insertionsort::sort as insertionsort;
 
 pub use self::selectionsort::sort as selectionsort;
+
+pub use self::shellsort::sort as shellsort;
