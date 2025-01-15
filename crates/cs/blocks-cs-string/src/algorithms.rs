@@ -4,6 +4,13 @@ Each algorithm is implemented with a focus on performance, safety, and usability
 
 # Available Algorithms
 
+## Aho-Corasick
+An efficient algorithm for multiple pattern matching using a finite state machine approach.
+- Time: O(n + m + z) where n is text length, m is total pattern length, z is number of matches
+- Space: O(m) for the automaton
+- Suitable for: Multiple pattern search in a single text scan
+- Features: Failure links for efficient matching, supports overlapping matches
+
 ## Knuth-Morris-Pratt (KMP)
 An efficient string searching algorithm that utilizes pattern preprocessing.
 - Time: O(n + m) where n is text length and m is pattern length
@@ -43,10 +50,16 @@ assert_eq!(positions, vec![6]);
 ```
 */
 
+pub mod aho_corasick;
 pub mod kmp;
 pub mod rabin_karp;
 pub mod boyer_moore;
 pub mod z_algorithm;
+
+/// Re-export of [`aho_corasick::AhoCorasick`].
+/// 
+/// Provides an efficient implementation of the Aho-Corasick algorithm for multiple pattern matching.
+pub use self::aho_corasick::AhoCorasick;
 
 /// Re-export of [`kmp::find_all`].
 /// 
