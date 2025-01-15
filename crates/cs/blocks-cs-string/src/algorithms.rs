@@ -25,6 +25,13 @@ A highly efficient string searching algorithm that scans characters from right t
 - Suitable for: Long patterns and large alphabets
 - Features: Bad character and good suffix rules for efficient skipping
 
+## Z-Algorithm
+A linear time pattern matching algorithm using Z-array preprocessing.
+- Time: O(n + m) for all cases
+- Space: O(n + m) for concatenated string
+- Suitable for: Pattern matching and string properties
+- Features: Z-box optimization for efficient matching
+
 # Examples
 ```rust
 use blocks_cs_string::algorithms::kmp;
@@ -39,6 +46,7 @@ assert_eq!(positions, vec![6]);
 pub mod kmp;
 pub mod rabin_karp;
 pub mod boyer_moore;
+pub mod z_algorithm;
 
 /// Re-export of [`kmp::find_all`].
 /// 
@@ -72,3 +80,14 @@ pub use self::boyer_moore::find_all as boyer_moore_find_all;
 /// 
 /// Similar to find_all but returns only the first occurrence of the pattern.
 pub use self::boyer_moore::find_first as boyer_moore_find_first;
+
+/// Re-export of [`z_algorithm::find_all`].
+/// 
+/// Provides an efficient implementation of the Z-Algorithm for string searching.
+/// Returns all occurrences of a pattern in the given text.
+pub use self::z_algorithm::find_all as z_algorithm_find_all;
+
+/// Re-export of [`z_algorithm::find_first`].
+/// 
+/// Similar to find_all but returns only the first occurrence of the pattern.
+pub use self::z_algorithm::find_first as z_algorithm_find_first;
