@@ -85,19 +85,15 @@ pub fn find_all(text: impl AsRef<[u8]>, pattern: impl AsRef<[u8]>) -> Result<Vec
         }
 
         // Check the first character
-        if matched && k >= 0 && pattern[0] == text[k] {
+        if matched && pattern[0] == text[k] {
             matches.push(k);
             // Move to next position after the start of current match
             i = k + m;
         } else {
             // Calculate shift using bad character rule
-            let shift = if k >= 0 {
-                match bad_char.get(&text[k]) {
-                    Some(&pos) => j.saturating_sub(pos),
-                    None => j + 1,
-                }
-            } else {
-                1
+            let shift = match bad_char.get(&text[k]) {
+                Some(&pos) => j.saturating_sub(pos),
+                None => j + 1,
             };
             
             i += std::cmp::max(1, shift);
@@ -142,17 +138,13 @@ pub fn find_first(text: impl AsRef<[u8]>, pattern: impl AsRef<[u8]>) -> Result<O
             k -= 1;
         }
 
-        if matched && k >= 0 && pattern[0] == text[k] {
+        if matched && pattern[0] == text[k] {
             return Ok(Some(k));
         }
 
-        let shift = if k >= 0 {
-            match bad_char.get(&text[k]) {
-                Some(&pos) => j.saturating_sub(pos),
-                None => j + 1,
-            }
-        } else {
-            1
+        let shift = match bad_char.get(&text[k]) {
+            Some(&pos) => j.saturating_sub(pos),
+            None => j + 1,
         };
         
         i += std::cmp::max(1, shift);
@@ -253,7 +245,6 @@ mod tests {
 
     #[test]
     fn test_bad_char_rule() {
-        let text = "ABCBAB";
         let pattern = "BAB";
         let bad_char = build_bad_char_table(pattern.as_bytes());
         assert_eq!(bad_char.get(&b'B'), Some(&2));
