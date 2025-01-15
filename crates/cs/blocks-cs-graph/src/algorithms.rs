@@ -97,7 +97,9 @@ assert_eq!(shortest_paths[&3], Some(6.0)); // Path 0->2->1->3 with total weight 
 pub mod dijkstra;
 pub mod bellman_ford;
 pub mod floyd_warshall;
+pub mod johnson;
 
 pub use dijkstra::shortest_paths as dijkstra;
 pub use bellman_ford::shortest_paths as bellman_ford;
 pub use floyd_warshall::all_pairs_shortest_paths as floyd_warshall;
+pub use johnson::all_pairs_shortest_paths as johnson;
