@@ -180,4 +180,41 @@ mod tests {
         assert_eq!(search(&data2, &5), Ok(Some(5)));
         assert_eq!(search(&data3, &10), Ok(Some(10)));
     }
+
+    #[test]
+    fn test_jump_past_end() {
+        let data = vec![1, 3, 5, 7, 9, 11, 13, 15, 17];
+        assert_eq!(search(&data, &20), Ok(None));
+    }
+
+    #[test]
+    fn test_step_adjustment() {
+        let data = vec![1, 3, 5, 7, 9, 11];
+        assert_eq!(search(&data, &10), Ok(None));
+    }
+
+    #[test]
+    fn test_break_on_greater() {
+        let data = vec![1, 3, 5, 7, 9, 11];
+        assert_eq!(search(&data, &4), Ok(None));
+    }
+
+    #[test]
+    fn test_prev_exceeds_len() {
+        let data = vec![1, 3, 5, 7, 9, 11, 13, 15, 17];
+        let target = 100;  // This will cause prev to exceed data.len()
+        assert_eq!(search(&data, &target), Ok(None));
+    }
+
+    #[test]
+    fn test_step_adjustment_with_target() {
+        let data = vec![1, 3, 5, 7, 9, 11, 13, 15];
+        assert_eq!(search(&data, &14), Ok(None));
+    }
+
+    #[test]
+    fn test_break_in_linear_search() {
+        let data = vec![1, 3, 5, 7, 9, 11, 13, 15];
+        assert_eq!(search(&data, &6), Ok(None));
+    }
 }

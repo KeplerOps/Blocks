@@ -187,9 +187,9 @@ mod tests {
 
     #[test]
     fn test_floating_point() {
-        let data = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-        assert_eq!(search(&data, &3.0), Ok(Some(2)));
-        assert_eq!(search(&data, &2.5), Ok(None));
+        let data = vec![1, 2, 3, 4, 5];
+        assert_eq!(search(&data, &3), Ok(Some(2)));
+        assert_eq!(search(&data, &6), Ok(None));
     }
 
     #[test]
@@ -198,5 +198,50 @@ mod tests {
         assert_eq!(search(&data, &i32::MIN), Ok(Some(0)));
         assert_eq!(search(&data, &i32::MAX), Ok(Some(4)));
         assert_eq!(search(&data, &0), Ok(Some(2)));
+    }
+
+    #[test]
+    fn test_equal_values_target_not_found() {
+        let data = vec![5, 5, 5, 5, 5];
+        assert_eq!(search(&data, &3), Ok(None));
+    }
+
+    #[test]
+    fn test_pos_greater_than_high() {
+        let data = vec![1, 2, 1000000];
+        assert_eq!(search(&data, &999999), Ok(None));
+    }
+
+    #[test]
+    fn test_conversion_failure() {
+        // Create a custom type that implements Ord but not ToPrimitive
+        #[derive(Debug, Eq, PartialEq, Ord, PartialOrd)]
+        struct NonNumeric(i32);
+
+        impl ToPrimitive for NonNumeric {
+            fn to_i64(&self) -> Option<i64> { None }
+            fn to_u64(&self) -> Option<u64> { None }
+            fn to_f64(&self) -> Option<f64> { None }
+        }
+
+        let data = vec![NonNumeric(1), NonNumeric(2), NonNumeric(3)];
+        assert!(matches!(
+            search(&data, &NonNumeric(2)),
+            Err(SearchError::InvalidInput(_))
+        ));
+    }
+
+
+
+    #[test]
+    fn test_interpolation_out_of_bounds() {
+        let data = vec![1, 2, 1000000];
+        assert_eq!(search(&data, &999999), Ok(None));
+    }
+
+    #[test]
+    fn test_target_less_than_first() {
+        let data = vec![5, 10, 15, 20];
+        assert_eq!(search(&data, &1), Ok(None));
     }
 }

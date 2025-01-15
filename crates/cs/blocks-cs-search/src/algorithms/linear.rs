@@ -61,10 +61,8 @@ pub fn search<T: PartialEq + Sync>(data: &[T], target: &T) -> Result<Option<usiz
 
 /// Performs a parallel linear search on large datasets
 fn parallel_search<T: PartialEq + Sync>(data: &[T], target: &T) -> Result<Option<usize>> {
-    data.par_iter()
-        .position_first(|item| item == target)
-        .map(Ok)
-        .unwrap_or(Ok(None))
+    Ok(data.par_iter()
+        .position_first(|item| item == target))
 }
 
 #[cfg(test)]
@@ -129,7 +127,7 @@ mod tests {
     #[test]
     fn test_parallel_search_large_dataset() {
         // Create a dataset larger than PARALLEL_THRESHOLD
-        let data: Vec<i32> = (0..PARALLEL_THRESHOLD + 100).collect();
+        let data: Vec<i32> = (0..PARALLEL_THRESHOLD + 100).map(|x| x as i32).collect();
         let target = PARALLEL_THRESHOLD as i32 + 50;
         
         assert_eq!(search(&data, &target), Ok(Some(PARALLEL_THRESHOLD + 50)));
@@ -138,7 +136,7 @@ mod tests {
 
     #[test]
     fn test_parallel_search_with_duplicates() {
-        let mut data: Vec<i32> = (0..PARALLEL_THRESHOLD + 100).collect();
+        let mut data: Vec<i32> = (0..PARALLEL_THRESHOLD + 100).map(|x| x as i32).collect();
         // Add some duplicates
         data[PARALLEL_THRESHOLD + 20] = 5;
         data[PARALLEL_THRESHOLD + 30] = 5;

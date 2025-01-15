@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 /// Custom error type for search operations
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum SearchError {
     #[error("Invalid input: {0}")]
     InvalidInput(String),
