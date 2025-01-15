@@ -32,3 +32,38 @@ impl Error for NLPError {}
 
 /// Custom Result type for NLP operations
 pub type Result<T> = std::result::Result<T, NLPError>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_error_display() {
+        let errors = vec![
+            (NLPError::ParseError("invalid syntax".to_string()), "Parse error: invalid syntax"),
+            (NLPError::GrammarError("invalid rule".to_string()), "Grammar error: invalid rule"),
+            (NLPError::InputError("empty input".to_string()), "Input error: empty input"),
+            (NLPError::ModelError("invalid params".to_string()), "Model error: invalid params"),
+            (NLPError::TrainingError("no data".to_string()), "Training error: no data"),
+        ];
+
+        for (error, expected) in errors {
+            assert_eq!(error.to_string(), expected);
+        }
+    }
+
+    #[test]
+    fn test_error_debug() {
+        let error = NLPError::ParseError("test".to_string());
+        assert!(format!("{:?}", error).contains("ParseError"));
+    }
+
+    #[test]
+    fn test_result_type() {
+        let ok_result: Result<i32> = Ok(42);
+        let err_result: Result<i32> = Err(NLPError::ParseError("test".to_string()));
+        
+        assert!(ok_result.is_ok());
+        assert!(err_result.is_err());
+    }
+}
