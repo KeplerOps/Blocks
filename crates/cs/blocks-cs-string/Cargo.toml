@@ -1,9 +1,19 @@
 [package]
 name = "blocks-cs-string"
-version.workspace = true
-edition.workspace = true
-authors.workspace = true
-license.workspace = true
-repository.workspace = true
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "String algorithms implementation for the Blocks project"
 
 [dependencies]
+thiserror = "1.0"
+
+[dev-dependencies]
+criterion = "0.5"
+
+[features]
+default = []
+
+[lib]
+doctest = true
+test = true
