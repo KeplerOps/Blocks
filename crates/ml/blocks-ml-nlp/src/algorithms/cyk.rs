@@ -11,6 +11,22 @@ enum CNFRule {
 }
 
 /// CYK Parser for context-free grammars in Chomsky Normal Form
+///
+/// # Algorithm Complexity
+/// - Time Complexity: O(n³|G|), where n is the length of the input string and |G| is the size of the grammar
+/// - Space Complexity: O(n²|N|), where n is the length of the input string and |N| is the number of non-terminals
+///
+/// # Memory Usage
+/// The algorithm uses a dynamic programming table of size n × n × |N|, where:
+/// - n is the length of the input string
+/// - |N| is the number of non-terminals in the grammar
+///
+/// For very long sentences or grammars with many non-terminals, memory usage can be significant.
+///
+/// # Limitations
+/// - Grammar must be in Chomsky Normal Form (CNF)
+/// - Does not handle empty productions (ε-productions)
+/// - Does not produce parse trees (only recognizes if a string is in the language)
 #[derive(Debug)]
 pub struct CYKParser {
     /// Rules of the grammar in CNF
@@ -168,6 +184,17 @@ mod tests {
         ]
     }
 
+    fn create_unicode_grammar() -> Vec<(&'static str, Vec<&'static str>)> {
+        vec![
+            ("S", vec!["NP VP"]),
+            ("NP", vec!["Det N"]),
+            ("VP", vec!["V NP"]),
+            ("Det", vec!["el", "la"]),
+            ("N", vec!["niño", "niña", "perro"]),
+            ("V", vec!["vio", "amó"]),
+        ]
+    }
+
     #[test]
     fn test_empty_sentence() {
         let parser = CYKParser::new(create_test_grammar()).unwrap();
@@ -245,5 +272,66 @@ mod tests {
             }
         }
         assert!(all_valid, "Single terminals should not form valid sentences");
+    }
+
+    #[test]
+    fn test_unicode_simple() {
+        let parser = CYKParser::new(create_unicode_grammar()).unwrap();
+        assert!(parser.parse("el niño vio la niña").unwrap());
+    }
+
+    #[test]
+    fn test_unicode_invalid() {
+        let parser = CYKParser::new(create_unicode_grammar()).unwrap();
+        assert!(!parser.parse("el vio niño la").unwrap());
+    }
+
+    #[test]
+    fn test_very_long_sentence() {
+        let parser = CYKParser::new(create_test_grammar()).unwrap();
+        let sentence = "the cat saw a dog with a mouse in the house with the cat in a tree with the bird in the sky";
+        assert!(parser.parse(sentence).unwrap());
+    }
+
+    #[test]
+    fn test_deep_recursion() {
+        let grammar = vec![
+            ("S", vec!["A B"]),
+            ("A", vec!["A A", "a"]),  // Allows for deep left recursion
+            ("B", vec!["b"]),
+        ];
+        let parser = CYKParser::new(grammar).unwrap();
+        
+        // Create a sentence with many 'a's followed by 'b'
+        let many_as: String = "a ".repeat(100);
+        let sentence = format!("{} b", many_as);
+        assert!(parser.parse(&sentence).unwrap());
+    }
+
+    #[test]
+    fn test_ambiguous_grammar() {
+        let grammar = vec![
+            ("S", vec!["A B", "B A"]),
+            ("A", vec!["a"]),
+            ("B", vec!["b"]),
+        ];
+        let parser = CYKParser::new(grammar).unwrap();
+        assert!(parser.parse("a b").unwrap());
+        assert!(parser.parse("b a").unwrap());
+    }
+
+    #[test]
+    fn test_empty_production() {
+        let result = CYKParser::new(vec![
+            ("S", vec![""]),  // Empty production
+        ]);
+        assert!(matches!(result, Err(NLPError::GrammarError(_))));
+    }
+
+    #[test]
+    fn test_whitespace_handling() {
+        let parser = CYKParser::new(create_test_grammar()).unwrap();
+        assert!(parser.parse("the   cat   saw   a   mouse").unwrap());
+        assert!(parser.parse("\tthe\ncat\rsaw\ta\nmouse").unwrap());
     }
 }
