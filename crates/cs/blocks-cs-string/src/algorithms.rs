@@ -18,6 +18,13 @@ A string searching algorithm that uses hashing to find exact pattern matches.
 - Suitable for: Multiple pattern search
 - Features: Rolling hash function for efficient sliding window
 
+## Boyer-Moore
+A highly efficient string searching algorithm that scans characters from right to left.
+- Time: O(n/m) best case, O(nm) worst case
+- Space: O(k) where k is alphabet size
+- Suitable for: Long patterns and large alphabets
+- Features: Bad character and good suffix rules for efficient skipping
+
 # Examples
 ```rust
 use blocks_cs_string::algorithms::kmp;
@@ -31,6 +38,7 @@ assert_eq!(positions, vec![6]);
 
 pub mod kmp;
 pub mod rabin_karp;
+pub mod boyer_moore;
 
 /// Re-export of [`kmp::find_all`].
 /// 
@@ -53,3 +61,14 @@ pub use self::rabin_karp::find_all as rabin_karp_find_all;
 /// 
 /// Similar to find_all but returns only the first occurrence of the pattern.
 pub use self::rabin_karp::find_first as rabin_karp_find_first;
+
+/// Re-export of [`boyer_moore::find_all`].
+/// 
+/// Provides an efficient implementation of the Boyer-Moore string searching algorithm.
+/// Returns all occurrences of a pattern in the given text.
+pub use self::boyer_moore::find_all as boyer_moore_find_all;
+
+/// Re-export of [`boyer_moore::find_first`].
+/// 
+/// Similar to find_all but returns only the first occurrence of the pattern.
+pub use self::boyer_moore::find_first as boyer_moore_find_first;
