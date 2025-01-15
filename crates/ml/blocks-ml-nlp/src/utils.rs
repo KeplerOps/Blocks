@@ -1,13 +1,17 @@
 //! Common utilities for NLP algorithms
 
-/// Splits text into tokens (words) while preserving certain punctuation marks
+/// Splits text into tokens (words) while preserving certain punctuation marks.
+/// Will be used by various NLP algorithms for text preprocessing.
+#[allow(dead_code)]
 pub fn tokenize(text: &str) -> Vec<String> {
     text.split_whitespace()
         .map(|s| s.to_string())
         .collect()
 }
 
-/// Joins tokens back into text
+/// Joins tokens back into text.
+/// Will be used by various NLP algorithms for text postprocessing.
+#[allow(dead_code)]
 pub fn detokenize(tokens: &[String]) -> String {
     tokens.join(" ")
 }
