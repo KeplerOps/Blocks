@@ -1,3 +1,5 @@
+# String Algorithms
+
 1. Knuth–Morris–Pratt (KMP)  
 2. Rabin–Karp  
 3. Boyer–Moore  
@@ -9,14 +11,16 @@
 9. Rolling Hash (for pattern matching)  
 10. Manacher's Algorithm (longest palindromic substring)
 
-# Aho-Corasick Algorithm Design
+## Aho-Corasick Algorithm Design
 
-## Overview
+### Overview
+
 The Aho-Corasick algorithm is a string matching algorithm that can efficiently find multiple patterns in a text simultaneously. It constructs a finite state machine from the patterns and then uses it to scan the text in a single pass.
 
-## Data Structures
+### Data Structures
 
-### TrieNode
+#### TrieNode
+
 ```rust
 struct TrieNode {
     // Children nodes indexed by character
@@ -30,7 +34,8 @@ struct TrieNode {
 }
 ```
 
-### Automaton
+#### Automaton
+
 ```rust
 struct AhoCorasick {
     // All nodes in the automaton
@@ -42,9 +47,9 @@ struct AhoCorasick {
 }
 ```
 
-## Algorithm Phases
+### Algorithm Phases
 
-### 1. Trie Construction
+#### 1. Trie Construction
 - Create root node
 - For each pattern:
   - Start at root
@@ -54,7 +59,7 @@ struct AhoCorasick {
 - Time: O(sum of pattern lengths)
 - Space: O(sum of pattern lengths)
 
-### 2. Failure Link Construction
+#### 2. Failure Link Construction
 - BFS traversal from root
 - For each node:
   - Get parent's failure link

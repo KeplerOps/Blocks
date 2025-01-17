@@ -20,7 +20,7 @@ use std::fmt::Debug;
 /// - Stable sort algorithm
 pub fn sort<T>(slice: &mut [T])
 where
-    T: Ord + Clone + Debug,
+    T: PartialOrd + Clone + Debug,
 {
     if slice.len() <= 1 {
         return;
@@ -37,7 +37,7 @@ where
         let mut last_swap = 0;
 
         for i in 0..new_len - 1 {
-            if slice[i] > slice[i + 1] {
+            if slice[i].partial_cmp(&slice[i + 1]).unwrap() == std::cmp::Ordering::Greater {
                 slice.swap(i, i + 1);
                 swapped = true;
                 last_swap = i + 1;
@@ -62,7 +62,7 @@ mod tests {
     fn test_empty_slice() {
         let mut arr: Vec<i32> = vec![];
         sort(&mut arr);
-        assert_eq!(arr, vec![]);
+        assert_eq!(arr, Vec::<i32>::new());
     }
 
     #[test]

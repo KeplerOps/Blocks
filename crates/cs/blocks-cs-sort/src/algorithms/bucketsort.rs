@@ -1,5 +1,3 @@
-use std::fmt::Debug;
-
 /// Bucket Sort implementation for sorting slices of floating-point numbers in the range [0, 1).
 /// 
 /// # Algorithm Overview
@@ -93,7 +91,7 @@ mod tests {
     fn test_empty_slice() {
         let mut arr: Vec<f64> = vec![];
         sort(&mut arr);
-        assert_eq!(arr, vec![]);
+        assert_eq!(arr, Vec::<f64>::new());
     }
 
     #[test]
@@ -152,7 +150,7 @@ mod tests {
             original_index: usize,
         }
 
-        let mut pairs = vec![
+        let pairs = vec![
             Pair { key: 0.5, original_index: 0 },
             Pair { key: 0.5, original_index: 1 },
             Pair { key: 0.7, original_index: 2 },

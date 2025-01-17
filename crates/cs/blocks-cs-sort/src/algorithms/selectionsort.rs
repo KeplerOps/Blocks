@@ -28,7 +28,7 @@ use std::fmt::Debug;
 /// - Works well when memory writes are expensive
 pub fn sort<T>(slice: &mut [T])
 where
-    T: Ord + Clone + Debug,
+    T: PartialOrd + Clone + Debug,
 {
     let len = slice.len();
     
@@ -37,7 +37,7 @@ where
         // Find the minimum element in unsorted array
         let mut min_idx = i;
         for j in (i + 1)..len {
-            if slice[j] < slice[min_idx] {
+            if slice[j].partial_cmp(&slice[min_idx]).unwrap() == std::cmp::Ordering::Less {
                 min_idx = j;
             }
         }

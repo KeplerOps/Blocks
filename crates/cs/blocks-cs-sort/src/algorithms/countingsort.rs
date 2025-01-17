@@ -1,5 +1,3 @@
-use std::fmt::Debug;
-
 /// Counting Sort implementation for sorting slices of unsigned integers.
 /// 
 /// # Algorithm Overview
@@ -78,7 +76,7 @@ mod tests {
     fn test_empty_slice() {
         let mut arr: Vec<u32> = vec![];
         sort(&mut arr);
-        assert_eq!(arr, vec![]);
+        assert_eq!(arr, Vec::<u32>::new());
     }
 
     #[test]
@@ -154,7 +152,7 @@ mod tests {
             original_index: usize,
         }
 
-        let mut pairs = vec![
+        let pairs = vec![
             Pair { key: 1, original_index: 0 },
             Pair { key: 1, original_index: 1 },
             Pair { key: 2, original_index: 2 },

@@ -28,7 +28,7 @@ use std::fmt::Debug;
 /// - Works well for medium-sized arrays
 pub fn sort<T>(slice: &mut [T])
 where
-    T: Ord + Clone + Debug,
+    T: PartialOrd + Clone + Debug,
 {
     let len = slice.len();
     if len <= 1 {
@@ -42,7 +42,7 @@ where
         // Do a gapped insertion sort for this gap size
         for i in gap..len {
             let mut j = i;
-            while j >= gap && slice[j - gap] > slice[j] {
+            while j >= gap && slice[j - gap].partial_cmp(&slice[j]).unwrap() == std::cmp::Ordering::Greater {
                 slice.swap(j - gap, j);
                 j -= gap;
             }

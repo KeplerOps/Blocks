@@ -1,20 +1,21 @@
-//! Mergesort implementation with parallel processing support.
-//! 
-//! This module provides a configurable mergesort implementation that can:
-//! - Use insertion sort for small arrays
-//! - Process large arrays in parallel using rayon
-//! - Handle generic types that implement Ord + Clone
-//! 
-//! # Safety
-//! 
-//! This implementation uses unsafe code in the following ways:
-//! - Uses `split_at_mut` for parallel processing (safe interface to unsafe code)
-//! - Uses rayon's parallel execution primitives (safe interface to unsafe code)
-//! 
-//! All unsafe operations are properly encapsulated and safe when used with types
-//! that implement the required traits (Send + Sync for parallel execution).
+/// Mergesort implementation with parallel processing support.
+/// 
+/// This module provides a configurable mergesort implementation that can:
+/// - Use insertion sort for small arrays
+/// - Process large arrays in parallel using rayon
+/// - Handle generic types that implement Ord + Clone
+/// 
+/// # Safety
+/// 
+/// This implementation uses unsafe code in the following ways:
+/// - Uses `split_at_mut` for parallel processing (safe interface to unsafe code)
+/// - Uses rayon's parallel execution primitives (safe interface to unsafe code)
+/// 
+/// All unsafe operations are properly encapsulated and safe when used with types
+/// that implement the required traits (Send + Sync for parallel execution).
 
 use std::fmt::Debug;
+#[cfg(feature = "parallel")]
 use rayon;
 
 use crate::error::{Result, SortError};
@@ -174,7 +175,7 @@ impl MergeSortBuilder {
         depth: usize,
     ) -> Result<()>
     where
-        T: Ord + Clone + Debug,
+        T: Ord + Clone + Debug + 'static,
     {
         // Check recursion depth
         if depth >= self.max_recursion_depth {
@@ -208,53 +209,53 @@ impl MergeSortBuilder {
         depth: usize,
     ) -> Result<()>
     where
-        T: Ord + Clone + Debug + Send + Sync,
+        T: Ord + Clone + Debug + Send + Sync + 'static,
     {
-        // Check recursion depth
-        if depth >= self.max_recursion_depth {
-            return Err(SortError::recursion_limit_exceeded(
-                depth,
-                self.max_recursion_depth,
-            ));
+        #[cfg(feature = "parallel")]
+        {
+            // Check recursion depth
+            if depth >= self.max_recursion_depth {
+                return Err(SortError::recursion_limit_exceeded(
+                    depth,
+                    self.max_recursion_depth,
+                ));
+            }
+
+            // Use insertion sort for small arrays
+            if slice.len() <= self.insertion_threshold {
+                insertion_sort(slice);
+                return Ok(());
+            }
+
+            let mid = slice.len() / 2;
+
+            // Create auxiliary buffers before splitting the slice
+            let template = slice[0].clone();
+            let mut left_aux = MergeBuffer::new(mid, &template)?;
+            let mut right_aux = MergeBuffer::new(slice.len() - mid, &template)?;
+
+            let (left, right) = slice.split_at_mut(mid);
+
+            let (left_result, right_result) = rayon::join(
+                || self.sort_sequential(left, &mut left_aux, depth + 1),
+                || self.sort_sequential(right, &mut right_aux, depth + 1),
+            );
+
+            left_result.map_err(|e| SortError::parallel_execution_failed(
+                format!("Left parallel task failed: {}", e)
+            ))?;
+            right_result.map_err(|e| SortError::parallel_execution_failed(
+                format!("Right parallel task failed: {}", e)
+            ))?;
+
+            merge(slice, mid, aux);
+            Ok(())
         }
 
-        // Use insertion sort for small arrays
-        if slice.len() <= self.insertion_threshold {
-            insertion_sort(slice);
-            return Ok(());
+        #[cfg(not(feature = "parallel"))]
+        {
+            self.sort_sequential(slice, aux, depth)
         }
-
-        let mid = slice.len() / 2;
-
-        // Create auxiliary buffers before splitting the slice
-        let template = slice[0].clone();
-        let mut left_aux = MergeBuffer::new(mid, &template)?;
-        let mut right_aux = MergeBuffer::new(slice.len() - mid, &template)?;
-
-        // SAFETY: split_at_mut is safe but uses unsafe code internally to create
-        // two mutable references to different parts of the slice. This is safe
-        // because the ranges are guaranteed not to overlap.
-        let (left, right) = slice.split_at_mut(mid);
-
-        // SAFETY: rayon's join uses unsafe code internally for thread management
-        // and parallel execution. This is safe because T: Send + Sync and we're
-        // operating on non-overlapping mutable slices.
-        let (left_result, right_result) = rayon::join(
-            || self.sort_sequential(left, &mut left_aux, depth + 1),
-            || self.sort_sequential(right, &mut right_aux, depth + 1),
-        );
-
-        // Handle any errors from parallel execution
-        left_result.map_err(|e| SortError::parallel_execution_failed(
-            format!("Left parallel task failed: {}", e)
-        ))?;
-        right_result.map_err(|e| SortError::parallel_execution_failed(
-            format!("Right parallel task failed: {}", e)
-        ))?;
-
-        // Merge the sorted halves
-        merge(slice, mid, aux);
-        Ok(())
     }
 }
 
@@ -272,7 +273,7 @@ impl MergeSortBuilder {
 /// - Parallel execution fails
 pub fn sort<T>(slice: &mut [T]) -> Result<()>
 where
-    T: Ord + Clone + Debug + Send + Sync,
+    T: Ord + Clone + Debug + Send + Sync + 'static,
 {
     MergeSortBuilder::new().sort(slice)
 }
@@ -289,7 +290,10 @@ fn insertion_sort<T: Ord>(slice: &mut [T]) {
     }
 }
 
-fn merge<T: Ord + Clone>(slice: &mut [T], mid: usize, aux: &mut MergeBuffer<T>) {
+fn merge<T>(slice: &mut [T], mid: usize, aux: &mut MergeBuffer<T>) 
+where
+    T: Ord + Clone + 'static,
+{
     // Copy to auxiliary buffer
     aux.as_mut_slice()[..slice.len()].clone_from_slice(slice);
 
@@ -324,7 +328,6 @@ fn merge<T: Ord + Clone>(slice: &mut [T], mid: usize, aux: &mut MergeBuffer<T>) 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::atomic::AtomicUsize;
 
     #[test]
     fn test_empty_slice() {
@@ -364,6 +367,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "parallel")]
     fn test_parallel_sorting() {
         // Create a large array to ensure parallel sorting is used
         let size = 100_000;
@@ -389,6 +393,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "parallel")]
     fn test_parallel_threshold() {
         let size = 10_000;
         let arr: Vec<i32> = (0..size).rev().collect();
@@ -417,6 +422,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "parallel")]
     fn test_parallel_stability() {
         #[derive(Debug, Clone, Eq, PartialEq)]
         struct Item {

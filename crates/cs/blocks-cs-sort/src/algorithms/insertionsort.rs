@@ -27,13 +27,11 @@ use std::fmt::Debug;
 /// - Online: can sort a list as it receives it
 pub fn sort<T>(slice: &mut [T])
 where
-    T: Ord + Clone + Debug,
+    T: PartialOrd + Clone + Debug,
 {
     for i in 1..slice.len() {
         let mut j = i;
-        // Move elements of slice[0..i] that are greater than key
-        // to one position ahead of their current position
-        while j > 0 && slice[j - 1] > slice[j] {
+        while j > 0 && slice[j - 1].partial_cmp(&slice[j]).unwrap() == std::cmp::Ordering::Greater {
             slice.swap(j - 1, j);
             j -= 1;
         }
@@ -48,7 +46,7 @@ mod tests {
     fn test_empty_slice() {
         let mut arr: Vec<i32> = vec![];
         sort(&mut arr);
-        assert_eq!(arr, vec![]);
+        assert_eq!(arr, Vec::<i32>::new());
     }
 
     #[test]

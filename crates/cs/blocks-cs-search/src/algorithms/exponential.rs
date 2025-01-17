@@ -1,5 +1,4 @@
 use crate::error::{Result, SearchError};
-use super::binary;
 
 /// Performs an exponential search on a sorted slice to find a target value.
 /// Also known as doubling or galloping search, it works by finding a range
