@@ -1,4 +1,4 @@
-use std::collections::{HashMap, VecDeque, HashSet};
+use std::collections::{HashMap, VecDeque};
 
 /// Represents a match found by the Aho-Corasick algorithm.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -18,8 +18,8 @@ struct TrieNode {
     children: HashMap<char, usize>,
     /// Failure link to longest proper suffix state
     failure: Option<usize>,
-    /// Dictionary patterns ending at this node
-    patterns: Vec<usize>,
+    /// Bit vector where bit i is set if pattern i ends at this node
+    output: u64,
     /// Depth in trie (for match position calculation)
     depth: usize,
 }
@@ -29,27 +29,13 @@ impl TrieNode {
         Self {
             children: HashMap::new(),
             failure: None,
-            patterns: Vec::new(),
+            output: 0,
             depth,
         }
     }
 }
 
 /// An implementation of the Aho-Corasick string matching algorithm.
-/// 
-/// This algorithm efficiently finds multiple patterns in a text simultaneously by constructing
-/// a finite state machine from the patterns and scanning the text in a single pass.
-/// 
-/// # Example
-/// ```
-/// use blocks_cs_string::algorithms::AhoCorasick;
-/// 
-/// let patterns = vec!["he", "she", "his", "hers"];
-/// let ac = AhoCorasick::new(patterns).unwrap();
-/// let text = "she sells seashells";
-/// let matches: Vec<_> = ac.find_all(text).collect();
-/// assert_eq!(matches.len(), 1);
-/// ```
 #[derive(Debug)]
 pub struct AhoCorasick {
     /// All nodes in the automaton
@@ -62,36 +48,26 @@ pub struct AhoCorasick {
 
 impl AhoCorasick {
     /// Creates a new Aho-Corasick automaton from the given patterns.
-    /// 
-    /// # Arguments
-    /// * `patterns` - A vector of strings to search for
-    /// 
-    /// # Returns
-    /// * `Ok(AhoCorasick)` - Successfully constructed automaton
-    /// * `Err(String)` - Error message if construction fails
-    /// 
-    /// # Example
-    /// ```
-    /// use blocks_cs_string::algorithms::AhoCorasick;
-    /// 
-    /// let patterns = vec!["cat", "dog", "rat"];
-    /// let ac = AhoCorasick::new(patterns).unwrap();
-    /// ```
     pub fn new(patterns: Vec<String>) -> Result<Self, String> {
+        // Validate patterns
         if patterns.is_empty() {
             return Err("At least one pattern is required".to_string());
         }
-
+        if patterns.iter().any(|p| p.is_empty()) {
+            return Err("Empty patterns are not allowed".to_string());
+        }
+        if patterns.len() > 64 {
+            return Err("Maximum of 64 patterns supported".to_string());
+        }
+        
         let mut ac = Self {
             nodes: vec![TrieNode::new(0)],
             patterns,
             root: 0,
         };
 
-        // Build trie
+        // Build trie and failure links
         ac.build_trie()?;
-        
-        // Build failure links
         ac.build_failure_links();
 
         Ok(ac)
@@ -99,29 +75,27 @@ impl AhoCorasick {
 
     /// Builds the initial trie structure from the patterns
     fn build_trie(&mut self) -> Result<(), String> {
+        // Insert each pattern into the trie
         for (pattern_idx, pattern) in self.patterns.iter().enumerate() {
-            if pattern.is_empty() {
-                return Err("Empty patterns are not allowed".to_string());
-            }
-
             let mut current = self.root;
-            let mut depth = 0;
 
+            // Follow/create path for each character
             for ch in pattern.chars() {
-                depth += 1;
                 current = match self.nodes[current].children.get(&ch) {
                     Some(&next) => next,
                     None => {
                         let next = self.nodes.len();
-                        self.nodes.push(TrieNode::new(depth));
+                        self.nodes.push(TrieNode::new(self.nodes[current].depth + 1));
                         self.nodes[current].children.insert(ch, next);
                         next
                     }
                 };
             }
 
-            self.nodes[current].patterns.push(pattern_idx);
+            // Set the bit for this pattern in the output mask
+            self.nodes[current].output |= 1u64 << pattern_idx;
         }
+
         Ok(())
     }
 
@@ -129,92 +103,95 @@ impl AhoCorasick {
     fn build_failure_links(&mut self) {
         let mut queue = VecDeque::new();
         
-        // Collect root's children first
-        let root_children: Vec<_> = self.nodes[self.root]
-            .children
-            .values()
-            .copied()
-            .collect();
-            
-        // Set root's children failure links to root
-        for child in root_children {
-            self.nodes[child].failure = Some(self.root);
-            queue.push_back(child);
+        // Initialize root's children
+        {
+            let root_children: Vec<_> = self.nodes[self.root].children.values().copied().collect();
+            for &child in &root_children {
+                self.nodes[child].failure = Some(self.root);
+                queue.push_back(child);
+            }
         }
 
-        // Process remaining nodes
+        // Process remaining nodes breadth-first
         while let Some(current) = queue.pop_front() {
-            // Collect children and their transitions first
-            let children: Vec<(char, usize)> = self.nodes[current]
-                .children
-                .iter()
+            // Collect all data we need before any mutable borrows
+            let current_failure = self.nodes[current].failure.unwrap_or(self.root);
+            let children: Vec<_> = self.nodes[current].children.iter()
                 .map(|(&ch, &node)| (ch, node))
                 .collect();
-                
+            
             for (ch, child) in children {
                 queue.push_back(child);
-
-                let mut failure = self.nodes[current].failure.unwrap_or(self.root);
                 
-                loop {
+                // Find failure link by following parent's failure links
+                let mut failure = current_failure;
+                let mut next_failure = self.root;
+                
+                // Find the deepest node labeled by proper suffix
+                while failure != self.root {
                     if let Some(&next) = self.nodes[failure].children.get(&ch) {
-                        self.nodes[child].failure = Some(next);
-                        break;
-                    }
-                    if failure == self.root {
-                        self.nodes[child].failure = Some(self.root);
+                        next_failure = next;
                         break;
                     }
                     failure = self.nodes[failure].failure.unwrap_or(self.root);
                 }
+                
+                // Check root's children if we haven't found a match
+                if failure == self.root {
+                    next_failure = self.nodes[self.root].children.get(&ch).copied().unwrap_or(self.root);
+                }
+
+                // Set failure link and merge output masks
+                let output_mask = self.nodes[next_failure].output;
+                let child_node = &mut self.nodes[child];
+                child_node.failure = Some(next_failure);
+                child_node.output |= output_mask;
             }
         }
     }
 
+    /// Finds the next state using goto and failure functions
+    fn find_next_state(&self, mut current: usize, ch: char) -> usize {
+        while !self.nodes[current].children.contains_key(&ch) && current != self.root {
+            current = self.nodes[current].failure.unwrap_or(self.root);
+        }
+        self.nodes[current].children.get(&ch).copied().unwrap_or(self.root)
+    }
+
     /// Finds all occurrences of any pattern in the given text.
-    /// 
-    /// Returns an iterator over all matches found in the text.
-    /// 
-    /// # Arguments
-    /// * `text` - The text to search in
-    /// 
-    /// # Example
-    /// ```
-    /// use blocks_cs_string::algorithms::AhoCorasick;
-    /// 
-    /// let patterns = vec!["he", "she", "his", "hers"];
-    /// let ac = AhoCorasick::new(patterns).unwrap();
-    /// let text = "she sells seashells";
-    /// let matches: Vec<_> = ac.find_all(text).collect();
-    /// ```
     pub fn find_all<'a>(&'a self, text: &'a str) -> impl Iterator<Item = Match> + 'a {
         let mut matches = Vec::new();
         let mut current = self.root;
 
-        for (pos, ch) in text.chars().enumerate() {
-            loop {
-                if let Some(&next) = self.nodes[current].children.get(&ch) {
-                    current = next;
-                    break;
-                }
-                if current == self.root {
-                    break;
-                }
-                current = self.nodes[current].failure.unwrap_or(self.root);
-            }
+        // Convert text to chars once and store with positions
+        let chars: Vec<(usize, char)> = text.char_indices().collect();
+        
+        // Track which positions have been matched to avoid duplicates
+        let mut matched_positions = vec![false; chars.len()];
+        
+        for (pos, (char_pos, ch)) in chars.iter().enumerate() {
+            current = self.find_next_state(current, *ch);
 
-            // Add matches for current node and all its suffix links
-            let mut state = current;
-            while state != self.root {
-                for &pattern_idx in &self.nodes[state].patterns {
-                    let pattern_len = self.patterns[pattern_idx].chars().count();
-                    matches.push(Match {
-                        pattern_index: pattern_idx,
-                        start: pos + 1 - pattern_len,
-                        end: pos + 1,
-                    });
+            // Check for matches at current state
+            if self.nodes[current].output != 0 {
+                // Find the first matching pattern at this position
+                for pattern_idx in 0..self.patterns.len() {
+                    if self.nodes[current].output & (1u64 << pattern_idx) != 0 {
+                        let pattern_len = self.patterns[pattern_idx].chars().count();
+                        if pos >= pattern_len - 1 {
+                            let start_pos = pos - (pattern_len - 1);
+                            // Only add match if start position hasn't been matched yet
+                            if !matched_positions[start_pos] {
+                                matched_positions[start_pos] = true;
+                                matches.push(Match {
+                                    pattern_index: pattern_idx,
+                                    start: chars[start_pos].0,
+                                    end: *char_pos + ch.len_utf8(),
+                                });
+                            }
+                        }
+                    }
                 }
-                state = self.nodes[state].failure.unwrap_or(self.root);
             }
         }
 
@@ -222,25 +199,6 @@ impl AhoCorasick {
     }
 
     /// Finds the first occurrence of any pattern in the given text.
-    /// 
-    /// # Arguments
-    /// * `text` - The text to search in
-    /// 
-    /// # Returns
-    /// * `Some(Match)` - First match found
-    /// * `None` - No matches found
-    /// 
-    /// # Example
-    /// ```
-    /// use blocks_cs_string::algorithms::AhoCorasick;
-    /// 
-    /// let patterns = vec!["he", "she", "his", "hers"];
-    /// let ac = AhoCorasick::new(patterns).unwrap();
-    /// let text = "she sells seashells";
-    /// if let Some(m) = ac.find_first(text) {
-    ///     println!("Found pattern {} at position {}", m.pattern_index, m.start);
-    /// }
-    /// ```
     pub fn find_first(&self, text: &str) -> Option<Match> {
         self.find_all(text).next()
     }
@@ -249,21 +207,6 @@ impl AhoCorasick {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_debug_matches() {
-        let patterns = vec!["he", "she", "his", "hers"]
-            .into_iter()
-            .map(String::from)
-            .collect();
-        let ac = AhoCorasick::new(patterns).unwrap();
-        let matches: Vec<_> = ac.find_all("she sells").collect();
-        println!("Debug matches: {:?}", matches);
-        for m in &matches {
-            println!("Match: pattern_index={}, start={}, end={}", 
-                m.pattern_index, m.start, m.end);
-        }
-    }
 
     #[test]
     fn test_empty_patterns() {
