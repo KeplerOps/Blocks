@@ -203,25 +203,61 @@ impl AhoCorasick {
                 current = self.nodes[current].failure.unwrap_or(self.root);
             }
 
-            // Use a HashSet to deduplicate matches at this position
-            let mut seen = HashSet::new();
+            // Find all matches at current position by following failure links
             let mut state = current;
-
-            // Check matches at current node and along failure chain
-            while state != self.root {
+            let mut current_pos_matches = Vec::new();
+            
+            loop {
+                // Check patterns at current state
                 for &pattern_idx in &self.nodes[state].patterns {
                     let pattern_len = self.patterns[pattern_idx].chars().count();
-                    let m = Match {
+                    current_pos_matches.push((pattern_len, Match {
                         pattern_index: pattern_idx,
                         start: pos + 1 - pattern_len,
                         end: pos + 1,
-                    };
-                    // Only add if we haven't seen this exact match before
-                    if seen.insert((pattern_idx, m.start, m.end)) {
-                        matches.push(m);
-                    }
+                    }));
+                }
+                
+                // Follow failure link
+                if state == self.root {
+                    break;
                 }
                 state = self.nodes[state].failure.unwrap_or(self.root);
+            }
+            
+            // Group matches by their ending position
+            let mut matches_by_end: HashMap<usize, Vec<(usize, &Match)>> = HashMap::new();
+            for (len, m) in current_pos_matches.iter() {
+                matches_by_end.entry(m.end).or_default().push((*len, m));
+            }
+            
+            // For each ending position, only keep the longest non-suffix matches
+            for matches_at_end in matches_by_end.values() {
+                // Sort by length (longest first)
+                let mut sorted_matches = matches_at_end.clone();
+                sorted_matches.sort_by_key(|(len, _)| std::cmp::Reverse(*len));
+                
+                // Keep track of which starts we've seen at this end position
+                let mut seen_starts = HashSet::new();
+                
+                // Add matches that aren't suffixes of longer ones
+                for i in 0..sorted_matches.len() {
+                    let (len, m) = &sorted_matches[i];
+                    
+                    if !seen_starts.contains(&m.start) {
+                        // Check if this is a suffix of any longer match at the same end
+                        let is_suffix = sorted_matches[..i].iter().any(|(other_len, other)| {
+                            *other_len > *len && // other match is longer
+                            other.end == m.end && // ends at same position
+                            other.start < m.start // starts earlier
+                        });
+                        
+                        if !is_suffix {
+                            matches.push((*m).clone());
+                            seen_starts.insert(m.start);
+                        }
+                    }
+                }
             }
         }
 
