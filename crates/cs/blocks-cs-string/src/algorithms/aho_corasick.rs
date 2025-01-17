@@ -1,5 +1,23 @@
 use std::collections::{HashMap, VecDeque};
 
+/// Configuration options for pattern matching behavior
+#[derive(Debug, Clone)]
+pub struct MatchConfig {
+    /// Only match at word boundaries
+    pub word_boundaries: bool,
+    /// Only report the longest match at each position
+    pub longest_match_only: bool,
+}
+
+impl Default for MatchConfig {
+    fn default() -> Self {
+        Self {
+            word_boundaries: false,
+            longest_match_only: false,
+        }
+    }
+}
+
 /// Represents a match found by the Aho-Corasick algorithm.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Match {
@@ -44,11 +62,18 @@ pub struct AhoCorasick {
     patterns: Vec<String>,
     /// Root node is always at index 0
     root: usize,
+    /// Configuration for pattern matching behavior
+    config: MatchConfig,
 }
 
 impl AhoCorasick {
-    /// Creates a new Aho-Corasick automaton from the given patterns.
+    /// Creates a new Aho-Corasick automaton from the given patterns with default configuration.
     pub fn new(patterns: Vec<String>) -> Result<Self, String> {
+        Self::with_config(patterns, MatchConfig::default())
+    }
+
+    /// Creates a new Aho-Corasick automaton with the specified configuration.
+    pub fn with_config(patterns: Vec<String>, config: MatchConfig) -> Result<Self, String> {
         // Validate patterns
         if patterns.is_empty() {
             return Err("At least one pattern is required".to_string());
@@ -64,6 +89,7 @@ impl AhoCorasick {
             nodes: vec![TrieNode::new(0)],
             patterns,
             root: 0,
+            config,
         };
 
         // Build trie and failure links
@@ -158,6 +184,19 @@ impl AhoCorasick {
         self.nodes[current].children.get(&ch).copied().unwrap_or(self.root)
     }
 
+    /// Helper function to check if a position is at a word boundary
+    fn is_word_boundary(&self, text: &str, start: usize, end: usize) -> bool {
+        if !self.config.word_boundaries {
+            return true;
+        }
+
+        let is_boundary_char = |c: char| !c.is_alphanumeric();
+        let before_is_boundary = start == 0 || text[..start].chars().next_back().map_or(true, is_boundary_char);
+        let after_is_boundary = end >= text.len() || text[end..].chars().next().map_or(true, is_boundary_char);
+        
+        before_is_boundary && after_is_boundary
+    }
+
     /// Finds all occurrences of any pattern in the given text.
     pub fn find_all<'a>(&'a self, text: &'a str) -> impl Iterator<Item = Match> + 'a {
         let mut matches = Vec::new();
@@ -166,33 +205,56 @@ impl AhoCorasick {
         // Convert text to chars once and store with positions
         let chars: Vec<(usize, char)> = text.char_indices().collect();
         
-        // Track which positions have been matched to avoid duplicates
-        let mut matched_positions = vec![false; chars.len()];
+        // Track matches at each position if we need longest-match-only
+        let mut matches_at_pos = if self.config.longest_match_only {
+            vec![Vec::new(); chars.len()]
+        } else {
+            Vec::new()
+        };
         
         for (pos, (char_pos, ch)) in chars.iter().enumerate() {
             current = self.find_next_state(current, *ch);
 
             // Check for matches at current state
             if self.nodes[current].output != 0 {
-                // Find the first matching pattern at this position
+                // Find all matching patterns at this position
                 for pattern_idx in 0..self.patterns.len() {
                     if self.nodes[current].output & (1u64 << pattern_idx) != 0 {
                         let pattern_len = self.patterns[pattern_idx].chars().count();
                         if pos >= pattern_len - 1 {
                             let start_pos = pos - (pattern_len - 1);
-                            // Only add match if start position hasn't been matched yet
-                            if !matched_positions[start_pos] {
-                                matched_positions[start_pos] = true;
-                                matches.push(Match {
+                            let start_byte = chars[start_pos].0;
+                            let end_byte = *char_pos + ch.len_utf8();
+                            
+                            // Check word boundaries if needed
+                            if self.is_word_boundary(text, start_byte, end_byte) {
+                                let m = Match {
                                     pattern_index: pattern_idx,
-                                    start: chars[start_pos].0,
-                                    end: *char_pos + ch.len_utf8(),
-                                });
+                                    start: start_byte,
+                                    end: end_byte,
+                                };
+                                
+                                if self.config.longest_match_only {
+                                    matches_at_pos[start_pos].push(m);
+                                } else {
+                                    matches.push(m);
+                                }
                             }
                         }
                     }
                 }
             }
+        }
+
+        // Process matches if using longest-match-only
+        if self.config.longest_match_only {
+            matches = matches_at_pos.into_iter()
+                .filter(|pos_matches| !pos_matches.is_empty())
+                .map(|mut pos_matches| {
+                    pos_matches.sort_by_key(|m| (std::cmp::Reverse(m.end - m.start), m.pattern_index));
+                    pos_matches[0].clone()
+                })
+                .collect();
         }
 
         matches.into_iter()
@@ -232,37 +294,67 @@ mod tests {
 
     #[test]
     fn test_multiple_patterns() {
-        let patterns = vec!["he", "she", "his", "hers"]
+        let patterns: Vec<String> = vec!["he", "she", "his", "hers"]
             .into_iter()
             .map(String::from)
             .collect();
-        let ac = AhoCorasick::new(patterns).unwrap();
+        
+        // Test with default config (all matches)
+        let ac = AhoCorasick::new(patterns.clone()).unwrap();
         let matches: Vec<_> = ac.find_all("she sells seashells").collect();
-        assert_eq!(matches.len(), 1);
-        assert_eq!(matches[0].pattern_index, 1); // "she"
+        assert_eq!(matches.len(), 4); // "he" in "she", "he" in "sells", "he" in "seashells"
+        
+        // Test with word boundaries
+        let ac = AhoCorasick::with_config(patterns.clone(), MatchConfig {
+            word_boundaries: true,
+            longest_match_only: false,
+        }).unwrap();
+        let matches: Vec<_> = ac.find_all("she sells seashells").collect();
+        assert_eq!(matches.len(), 1); // only "she"
+        assert_eq!(matches[0].pattern_index, 1);
         assert_eq!(matches[0].start, 0);
         assert_eq!(matches[0].end, 3);
     }
 
     #[test]
     fn test_overlapping_patterns() {
-        let patterns = vec!["ant", "ant colony", "colony"]
+        let patterns: Vec<String> = vec!["ant", "ant colony", "colony"]
             .into_iter()
             .map(String::from)
             .collect();
-        let ac = AhoCorasick::new(patterns).unwrap();
+        
+        // Test with default config (all matches)
+        let ac = AhoCorasick::new(patterns.clone()).unwrap();
         let matches: Vec<_> = ac.find_all("ant colony").collect();
         assert_eq!(matches.len(), 3);
+        
+        // Test with longest-match-only
+        let ac = AhoCorasick::with_config(patterns, MatchConfig {
+            word_boundaries: false,
+            longest_match_only: true,
+        }).unwrap();
+        let matches: Vec<_> = ac.find_all("ant colony").collect();
+        assert_eq!(matches.len(), 2); // "ant colony" and "colony"
     }
 
     #[test]
     fn test_unicode() {
-        let patterns = vec!["🦀", "🦀🔧", "🔧"]
+        let patterns: Vec<String> = vec!["🦀", "🦀🔧", "🔧"]
             .into_iter()
             .map(String::from)
             .collect();
-        let ac = AhoCorasick::new(patterns).unwrap();
+        
+        // Test with default config (all matches)
+        let ac = AhoCorasick::new(patterns.clone()).unwrap();
         let matches: Vec<_> = ac.find_all("🦀🔧").collect();
         assert_eq!(matches.len(), 3);
+        
+        // Test with longest-match-only
+        let ac = AhoCorasick::with_config(patterns, MatchConfig {
+            word_boundaries: false,
+            longest_match_only: true,
+        }).unwrap();
+        let matches: Vec<_> = ac.find_all("🦀🔧").collect();
+        assert_eq!(matches.len(), 2); // "��🔧" and "🔧"
     }
 }
