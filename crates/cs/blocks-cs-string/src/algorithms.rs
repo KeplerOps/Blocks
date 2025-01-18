@@ -39,6 +39,13 @@ A linear time pattern matching algorithm using Z-array preprocessing.
 - Suitable for: Pattern matching and string properties
 - Features: Z-box optimization for efficient matching
 
+## Suffix Array
+A data structure used to efficiently find all occurrences of a pattern in a text.
+- Time: O(n + m) for all cases
+- Space: O(n + m) for the suffix array
+- Suitable for: Pattern matching and string properties
+- Features: Efficiently finds all occurrences of a pattern in a text
+
 # Examples
 ```rust
 use blocks_cs_string::algorithms::kmp;
@@ -51,10 +58,11 @@ assert_eq!(positions, vec![6]);
 */
 
 pub mod aho_corasick;
+pub mod boyer_moore;
 pub mod kmp;
 pub mod rabin_karp;
-pub mod boyer_moore;
 pub mod z_algorithm;
+pub mod suffix_array;
 
 /// Re-export of [`aho_corasick::AhoCorasick`].
 /// 
@@ -104,3 +112,14 @@ pub use self::z_algorithm::find_all as z_algorithm_find_all;
 /// 
 /// Similar to find_all but returns only the first occurrence of the pattern.
 pub use self::z_algorithm::find_first as z_algorithm_find_first;
+
+/// Re-export of [`suffix_array::find_all`].
+/// 
+/// Provides an efficient implementation of suffix array pattern matching.
+/// Returns all occurrences of a pattern in the given text.
+pub use self::suffix_array::find_all as suffix_array_find_all;
+
+/// Re-export of [`suffix_array::find_first`].
+/// 
+/// Similar to find_all but returns only the first occurrence of the pattern.
+pub use self::suffix_array::find_first as suffix_array_find_first;
