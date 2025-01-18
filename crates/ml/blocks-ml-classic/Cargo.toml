@@ -9,6 +9,7 @@ description = "Classic machine learning algorithms implemented in modern Rust"
 
 [dependencies]
 ndarray.workspace = true
+ndarray-linalg = { version = "0.16", features = ["openblas-system"] }
 thiserror.workspace = true
 rand.workspace = true
 rand_distr.workspace = true
@@ -29,4 +30,8 @@ serde-support = ["serde", "ndarray/serde"]
 
 [[bench]]
 name = "clustering_benchmarks"
+harness = false
+
+[[bench]]
+name = "regression_benchmarks"
 harness = false

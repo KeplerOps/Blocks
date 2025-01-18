@@ -5,3 +5,4 @@ pub mod boosting;
 
 // Re-export implemented algorithms
 pub use clustering::{kmeans::KMeans, knn::KNN};
+pub use regression::linear::LinearRegression;
