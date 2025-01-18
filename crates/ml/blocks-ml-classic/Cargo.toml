@@ -5,5 +5,28 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
+description = "Classic machine learning algorithms implemented in modern Rust"
 
 [dependencies]
+ndarray.workspace = true
+thiserror.workspace = true
+rand.workspace = true
+rand_distr.workspace = true
+rayon = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+criterion = { workspace = true, optional = true }
+
+[dev-dependencies]
+criterion.workspace = true
+approx.workspace = true
+proptest.workspace = true
+rand_chacha.workspace = true
+
+[features]
+default = ["parallel"]
+parallel = ["rayon"]
+serde-support = ["serde", "ndarray/serde"]
+
+[[bench]]
+name = "clustering_benchmarks"
+harness = false
