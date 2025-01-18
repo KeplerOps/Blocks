@@ -7,7 +7,7 @@ A modern Rust implementation of classic machine learning algorithms, focusing on
 | Algorithm | Status | Test Coverage | Notes |
 |-----------|--------|---------------|-------|
 | 1. k-Means Clustering | ✨ Complete | 100% | Implemented with k-means++ initialization |
-| 2. k-Nearest Neighbors (k-NN) | 🚧 Planned | - | - |
+| 2. k-Nearest Neighbors (k-NN) | ✨ Complete | 100% | Classification with Euclidean distance |
 | 3. Linear Regression (OLS) | 🚧 Planned | - | - |
 | 4. Logistic Regression | 🚧 Planned | - | - |
 | 5. Decision Tree Learning (ID3, C4.5) | 🚧 Planned | - | - |
@@ -53,6 +53,8 @@ Legend:
 - ✅ Achieved 100% test coverage for k-means implementation
 
 Next steps:
-- Implement k-NN algorithm
-- Add parallel processing support for k-means using rayon
+- Implement Linear Regression (OLS)
+- Add parallel processing support for k-means and k-NN using rayon
 - Add more test cases with larger datasets
+- Add cross-validation support for k-NN
+- Add distance metric options for k-NN (Manhattan, Minkowski)
