@@ -46,6 +46,13 @@ A data structure used to efficiently find all occurrences of a pattern in a text
 - Suitable for: Pattern matching and string properties
 - Features: Efficiently finds all occurrences of a pattern in a text
 
+## Suffix Automaton
+A data structure used to efficiently find all occurrences of a pattern in a text.
+- Time: O(n + m) for all cases
+- Space: O(n + m) for the suffix automaton
+- Suitable for: Pattern matching and string properties
+- Features: Efficiently finds all occurrences of a pattern in a text
+
 # Examples
 ```rust
 use blocks_cs_string::algorithms::kmp;
@@ -63,6 +70,7 @@ pub mod kmp;
 pub mod rabin_karp;
 pub mod z_algorithm;
 pub mod suffix_array;
+pub mod suffix_automaton;
 
 /// Re-export of [`aho_corasick::AhoCorasick`].
 /// 
@@ -123,3 +131,8 @@ pub use self::suffix_array::find_all as suffix_array_find_all;
 /// 
 /// Similar to find_all but returns only the first occurrence of the pattern.
 pub use self::suffix_array::find_first as suffix_array_find_first;
+
+/// Re-export of [`suffix_automaton::SuffixAutomaton`].
+/// 
+/// Provides an efficient implementation of the suffix automaton for string searching.
+pub use self::suffix_automaton::SuffixAutomaton;
