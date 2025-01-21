@@ -20,6 +20,8 @@ pub struct SuffixNode {
 }
 
 /// A suffix tree for a given string, built via Ukkonen's algorithm.
+/// Time complexity: O(n) for construction
+/// Space complexity: O(n) where n is the length of the input string
 pub struct SuffixTree {
     /// The text, stored as characters
     text: Vec<char>,
@@ -288,6 +290,78 @@ impl SuffixTree {
             println!();
         }
     }
+
+    /// Find all occurrences of a pattern in the text.
+    /// Returns a vector of starting positions (0-based) where the pattern occurs.
+    /// Time complexity: O(m + k) where m is pattern length and k is number of occurrences
+    pub fn find_all(&self, pattern: &str) -> Vec<usize> {
+        if pattern.is_empty() {
+            return vec![];
+        }
+
+        let pattern: Vec<char> = pattern.chars().collect();
+        let mut results = Vec::new();
+        let mut curr_node = self.root;
+        let mut curr_len = 0;
+        let mut pattern_idx = 0;
+
+        'outer: while pattern_idx < pattern.len() {
+            let curr_char = pattern[pattern_idx];
+            
+            // If we're in the middle of an edge
+            if curr_len > 0 {
+                let node = &self.nodes[curr_node];
+                let edge_pos = (node.start + curr_len) as usize;
+                if edge_pos > self.text.len() || self.text[edge_pos] != curr_char {
+                    return results;
+                }
+                curr_len += 1;
+                pattern_idx += 1;
+                
+                let edge_len = self.edge_length(curr_node);
+                if curr_len == edge_len {
+                    curr_len = 0;
+                }
+                continue;
+            }
+
+            // We're at a node, look for next edge
+            match self.nodes[curr_node].children.get(&curr_char) {
+                Some(&next_node) => {
+                    curr_node = next_node;
+                    curr_len = 1;
+                    pattern_idx += 1;
+                }
+                None => break 'outer,
+            }
+        }
+
+        // If we found the complete pattern, collect all leaf positions
+        if pattern_idx == pattern.len() {
+            self.collect_leaf_positions(curr_node, &mut results);
+        }
+
+        results.sort_unstable();
+        results
+    }
+
+    /// Helper function to collect all leaf positions in the subtree rooted at node_idx
+    fn collect_leaf_positions(&self, node_idx: usize, results: &mut Vec<usize>) {
+        let node = &self.nodes[node_idx];
+        
+        if node.children.is_empty() {
+            // This is a leaf
+            if node.suffix_index >= 0 {
+                results.push(node.suffix_index as usize);
+            }
+            return;
+        }
+
+        // Recursively collect from all children
+        for &child_idx in node.children.values() {
+            self.collect_leaf_positions(child_idx, results);
+        }
+    }
 }
 
 // Example usage/test
@@ -299,9 +373,54 @@ mod tests {
     fn test_suffix_tree_build() {
         let mut st = SuffixTree::new("xabxa#babxba$");
         st.build();
-
-        // Check we have more than 1 node
         assert!(st.node_count() > 1);
-        // You can add more specific correctness checks here.
+    }
+
+    #[test]
+    fn test_pattern_search() {
+        let mut st = SuffixTree::new("banana");
+        st.build();
+        
+        assert_eq!(st.find_all("ana"), vec![1, 3]);
+        assert_eq!(st.find_all("na"), vec![2, 4]);
+        assert_eq!(st.find_all("ban"), vec![0]);
+        assert_eq!(st.find_all("xyz"), vec![]);
+    }
+
+    #[test]
+    fn test_empty_pattern() {
+        let mut st = SuffixTree::new("banana");
+        st.build();
+        assert_eq!(st.find_all(""), vec![]);
+    }
+
+    #[test]
+    fn test_unicode() {
+        let mut st = SuffixTree::new("こんにちは世界");
+        st.build();
+        
+        assert_eq!(st.find_all("にち"), vec![2]);
+        assert_eq!(st.find_all("世界"), vec![5]);
+        assert_eq!(st.find_all("世に"), vec![]);
+    }
+
+    #[test]
+    fn test_overlapping_patterns() {
+        let mut st = SuffixTree::new("aaaaa");
+        st.build();
+        
+        assert_eq!(st.find_all("aa"), vec![0, 1, 2, 3]);
+        assert_eq!(st.find_all("aaa"), vec![0, 1, 2]);
+    }
+
+    #[test]
+    fn test_long_text() {
+        let text = "a".repeat(1000) + "b";
+        let mut st = SuffixTree::new(&text);
+        st.build();
+        
+        assert_eq!(st.find_all("aaa").len(), 997);
+        assert_eq!(st.find_all("b"), vec![1000]);
+        assert_eq!(st.find_all("c"), vec![]);
     }
 }
