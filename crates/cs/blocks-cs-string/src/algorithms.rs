@@ -53,6 +53,13 @@ A data structure used to efficiently find all occurrences of a pattern in a text
 - Suitable for: Pattern matching and string properties
 - Features: Efficiently finds all occurrences of a pattern in a text
 
+## Suffix Tree
+A tree data structure that represents all suffixes of a string, built using Ukkonen's algorithm.
+- Time: O(n) for construction, O(m) for pattern matching where n is text length and m is pattern length
+- Space: O(n) for the tree structure
+- Suitable for: Pattern matching, substring problems, and string analysis
+- Features: Online construction, suffix links for O(n) build time
+
 # Examples
 ```rust
 use blocks_cs_string::algorithms::kmp;
@@ -71,6 +78,7 @@ pub mod rabin_karp;
 pub mod z_algorithm;
 pub mod suffix_array;
 pub mod suffix_automaton;
+pub mod suffix_tree;
 
 /// Re-export of [`aho_corasick::AhoCorasick`].
 /// 
@@ -136,3 +144,9 @@ pub use self::suffix_array::find_first as suffix_array_find_first;
 /// 
 /// Provides an efficient implementation of the suffix automaton for string searching.
 pub use self::suffix_automaton::SuffixAutomaton;
+
+/// Re-export of [`suffix_tree::SuffixTree`].
+/// 
+/// Provides an efficient implementation of Ukkonen's algorithm for suffix tree construction
+/// and pattern matching.
+pub use self::suffix_tree::SuffixTree;
