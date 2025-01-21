@@ -50,6 +50,7 @@ impl StringError {
     }
 
     /// Creates a new AllocationFailed error.
+    #[allow(dead_code)]
     pub(crate) fn allocation_failed(reason: impl Display) -> Self {
         Self::AllocationFailed {
             reason: reason.to_string(),
@@ -57,6 +58,7 @@ impl StringError {
     }
 
     /// Creates a new InvalidInput error.
+    #[allow(dead_code)]
     pub(crate) fn invalid_input(reason: impl Display) -> Self {
         Self::InvalidInput {
             reason: reason.to_string(),

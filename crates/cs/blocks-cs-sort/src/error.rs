@@ -1,6 +1,6 @@
-use std::fmt::Display;
-use std::error::Error;
+use std::fmt::{Display, Formatter};
 use std::collections::TryReserveError;
+use std::error::Error;
 use thiserror::Error;
 
 /// Errors that can occur during sorting operations.

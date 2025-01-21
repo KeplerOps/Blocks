@@ -16,6 +16,12 @@ Each algorithm is implemented with a focus on:
   - O(m) space for pattern preprocessing
   - No backtracking in main search phase
 
+## Suffix Structures
+- [`SuffixArray`](mod@algorithms::suffix_array): Efficient string indexing and searching
+  - O(n log n) construction
+  - O(m log n) search time
+  - O(n) space complexity
+
 # Usage Example
 
 ```rust

@@ -75,10 +75,10 @@ pub mod aho_corasick;
 pub mod boyer_moore;
 pub mod kmp;
 pub mod rabin_karp;
-pub mod z_algorithm;
 pub mod suffix_array;
 pub mod suffix_automaton;
 pub mod suffix_tree;
+pub mod z_algorithm;
 
 /// Re-export of [`aho_corasick::AhoCorasick`].
 /// 
@@ -150,3 +150,6 @@ pub use self::suffix_automaton::SuffixAutomaton;
 /// Provides an efficient implementation of Ukkonen's algorithm for suffix tree construction
 /// and pattern matching.
 pub use self::suffix_tree::SuffixTree;
+
+/// Re-export of [`suffix_array::SuffixArray`].
+pub use self::suffix_array::SuffixArray;

@@ -34,11 +34,14 @@ impl State {
 /// A suffix automaton for substring queries and occurrence finding.
 #[derive(Debug)]
 pub struct SuffixAutomaton {
+    /// The states of the automaton
     states: Vec<State>,
-    /// Index of the state representing the largest‐length substring so far
+    /// The initial state
+    initial: usize,
+    /// The last state that was added
     last: usize,
-    /// Original text length (not always strictly needed)
-    text_len: usize,
+    /// The text that was used to build the automaton
+    text: Vec<char>,
 }
 
 impl SuffixAutomaton {
@@ -46,8 +49,9 @@ impl SuffixAutomaton {
     pub fn new(text: &str) -> Self {
         let mut sa = Self {
             states: vec![State::new(0)], // root: length=0
+            initial: 0,
             last: 0,
-            text_len: text.chars().count(),
+            text: text.chars().collect(),
         };
 
         for (i, ch) in text.chars().enumerate() {
@@ -87,10 +91,10 @@ impl SuffixAutomaton {
                 // Need to clone
                 let clone = self.states.len();
                 self.states.push(State::new(self.states[p].len + 1));
-                // Copy q’s transitions and link
+                // Copy q's transitions and link
                 self.states[clone].next = self.states[q].next.clone();
                 self.states[clone].link = self.states[q].link;
-                // The clone initially has no end positions; they’ll be set by propagate_positions()
+                // The clone initially has no end positions; they'll be set by propagate_positions()
 
                 // Redirect transitions that pointed to q
                 while p != usize::MAX && self.states[p].next.get(&ch) == Some(&q) {
