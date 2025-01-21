@@ -32,7 +32,7 @@ A divide-and-conquer algorithm that guarantees stability and consistent performa
 
 # Examples
 ```rust
-use blocks_cs_sort::algorithms::{quicksort, heapsort};
+use blocks_cs_sort::algorithms::{quicksort, heapsort, mergesort};
 
 // Using QuickSort
 let mut numbers = vec![3, 1, 4, 1, 5, 9];
