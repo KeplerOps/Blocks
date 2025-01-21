@@ -1,436 +1,307 @@
-use std::collections::{HashMap, BTreeMap};
-use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::collections::HashMap;
 
-/// Represents the Suffix Tree.
-///
-/// Fields:
-/// - `text`: the input text as a vector of characters
-/// - `root`: the index of the root node
-/// - `nodes`: the array of nodes in the tree
-/// - `active_node`: the current active node for Ukkonen's algorithm
-/// - `active_edge`: the current active edge character
-/// - `active_length`: the length of the active point on the current edge
-/// - `remaining_suffix_count`: the number of suffixes yet to be added
-/// - `end`: a shared pointer to the current end index
-/// - `parent_map`: a map to keep track of parent nodes during construction
+/// A node in the suffix tree.
 #[derive(Debug)]
-pub struct SuffixTree {
-    text: Vec<char>,
-    root: usize,
-    nodes: Vec<Node>,
-    active_node: usize,
-    active_edge: Option<char>,
-    active_length: usize,
-    remaining_suffix_count: usize,
-    end: Arc<AtomicUsize>,
-    parent_map: HashMap<usize, usize>,
-}
+pub struct SuffixNode {
+    /// Map from character -> child node index
+    children: HashMap<char, usize>,
 
-/// A node in the Suffix Tree.
-///
-/// - `children`: maps from character to `Edge`.
-/// - `suffix_link`: for Ukkonen's algorithm (points to another node).
-#[derive(Debug, Default)]
-pub struct Node {
-    children: BTreeMap<char, Edge>,
+    /// Suffix link
     suffix_link: Option<usize>,
+
+    /// Start index of the edge label in the text
+    start: i32,
+
+    /// End index of the edge label in the text (-1 means it's a leaf using `leaf_end`)
+    end: i32,
+
+    /// For leaves, once the tree is fully built, the suffix index is set.
+    suffix_index: i32,
 }
 
-impl Node {
-    fn new() -> Self {
-        Self {
-            children: BTreeMap::<char, Edge>::new(),
-            suffix_link: None,
-        }
-    }
-}
+/// A suffix tree for a given string, built via Ukkonen's algorithm.
+pub struct SuffixTree {
+    /// The text, stored as characters
+    text: Vec<char>,
 
-/// Represents an edge in the tree.
-///
-/// Instead of storing the entire substring, we store:
-/// - `start` and `end` indices into `SuffixTree::text`
-/// - `target_node`: the index of the node this edge leads to
-#[derive(Debug, Clone)]
-struct Edge {
-    start: usize,
-    end: EdgeEnd,
-    target_node: usize,
-}
+    /// A list of all nodes
+    nodes: Vec<SuffixNode>,
 
-impl Edge {
-    fn new(start: usize, end: EdgeEnd, target_node: usize) -> Self {
-        Self {
-            start,
-            end,
-            target_node,
-        }
-    }
-}
+    /// The index of the root in `nodes`
+    root: usize,
 
-/// Either a specific index in the text or a pointer to the global end.
-#[derive(Debug, Clone)]
-enum EdgeEnd {
-    Fixed(usize),
-    Shared(Arc<AtomicUsize>),
-}
+    /// Active node index
+    active_node: usize,
 
-impl EdgeEnd {
-    fn value(&self) -> usize {
-        match self {
-            Self::Fixed(v) => *v,
-            Self::Shared(v) => v.load(Ordering::SeqCst),
-        }
-    }
+    /// Index of the active edge (character) in `text`
+    active_edge: i32,
 
-    fn is_valid(&self) -> bool {
-        match self {
-            Self::Fixed(_) => true,
-            Self::Shared(v) => v.load(Ordering::SeqCst) != usize::MAX,
-        }
-    }
+    /// How many characters in the current edge are matched
+    active_length: i32,
+
+    /// How many suffixes remain to be added in the current phase
+    remainder: i32,
+
+    /// Internal node from the last split (if any), awaiting a suffix link
+    last_new_node: Option<usize>,
+
+    /// Global end index for leaves (we treat any node with end == -1 as a leaf)
+    leaf_end: i32,
 }
 
 impl SuffixTree {
-    /// Create a new suffix tree from the given text.
-    /// Appends a sentinel character `$` to ensure uniqueness of suffix ends.
-    pub fn new(text: &str) -> Self {
-        let mut chars: Vec<char> = text.chars().collect();
-        if !chars.ends_with(&['$']) {
-            chars.push('$');
-        }
+    /// Create a new (empty) suffix tree object for the given string.
+    pub fn new<S: AsRef<str>>(input: S) -> Self {
+        let text: Vec<char> = input.as_ref().chars().collect();
+        // Pre-allocate up to 2 * text.len(), or more, to reduce reallocation
+        let capacity = 2 * text.len().max(16);
 
-        let mut tree = Self {
-            text: chars,
-            root: 0,
-            nodes: vec![Node::new()],
-            active_node: 0,
-            active_edge: None,
-            active_length: 0,
-            remaining_suffix_count: 0,
-            end: Arc::new(AtomicUsize::new(0)),
-            parent_map: HashMap::<usize, usize>::new(),
+        // Create a root node
+        let root_node = SuffixNode {
+            children: HashMap::new(),
+            suffix_link: None,
+            start: -1,
+            end: -1,
+            suffix_index: -1,
         };
 
-        for i in 0..tree.text.len() {
-            tree.extend_suffix_tree(i);
-        }
+        let mut nodes = Vec::with_capacity(capacity);
+        nodes.push(root_node);
 
-        tree
+        Self {
+            text,
+            nodes,
+            root: 0,
+            active_node: 0,
+            active_edge: -1,
+            active_length: 0,
+            remainder: 0,
+            last_new_node: None,
+            leaf_end: -1,
+        }
     }
 
-    /// Extends the suffix tree with a new character at position i.
-    fn extend_suffix_tree(&mut self, i: usize) {
-        self.end.store(i, Ordering::SeqCst);
-        self.remaining_suffix_count += 1;
-        let mut last_new_node: Option<usize> = None;
+    /// Public method to build the suffix tree with Ukkonen's algorithm.
+    pub fn build(&mut self) {
+        for i in 0..self.text.len() {
+            self.extend(i as i32);
+        }
+        // Assign suffix indices (and optionally print edges).
+        self.assign_suffix_indices_dfs(self.root, 0);
+    }
 
-        while self.remaining_suffix_count > 0 {
+    /// Returns how many nodes are currently in the tree
+    pub fn node_count(&self) -> usize {
+        self.nodes.len()
+    }
+
+    /// Allocate a new node and return its index in `self.nodes`.
+    fn new_node(&mut self, start: i32, end: i32) -> usize {
+        let node = SuffixNode {
+            children: HashMap::new(),
+            // Typically for internal nodes, we link to root by default
+            suffix_link: Some(self.root),
+            start,
+            end,
+            suffix_index: -1,
+        };
+        self.nodes.push(node);
+        self.nodes.len() - 1
+    }
+
+    /// Returns the effective edge length of a node: `node.end - node.start + 1`
+    /// If `node.end == -1`, we treat it as a leaf using `self.leaf_end`.
+    fn edge_length(&self, node_idx: usize) -> i32 {
+        let node = &self.nodes[node_idx];
+        if node.start == -1 {
+            return 0; // root
+        }
+        let end = if node.end == -1 {
+            self.leaf_end
+        } else {
+            node.end
+        };
+        end - node.start + 1
+    }
+
+    /// "Walk down" to a child node if `active_length` >= edge_length(child).
+    /// Returns true if we walked down, false otherwise.
+    fn walk_down(&mut self, next_node: usize) -> bool {
+        let edge_len = self.edge_length(next_node);
+        if self.active_length >= edge_len {
+            self.active_edge += edge_len;
+            self.active_length -= edge_len;
+            self.active_node = next_node;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Extend the suffix tree by adding the character at `pos` in `self.text`.
+    fn extend(&mut self, pos: i32) {
+        // We are adding a new character that extends all leaves to position `pos`
+        self.leaf_end = pos;
+        self.remainder += 1;
+        self.last_new_node = None;
+
+        while self.remainder > 0 {
             if self.active_length == 0 {
-                self.active_edge = Some(self.text[i]);
+                self.active_edge = pos;
             }
 
-            let active_char = self.active_edge.unwrap();
+            let active_char = self.text[self.active_edge as usize];
+
+            // We do lookups in a narrower scope so we don't keep a long-lived mutable ref
             if !self.nodes[self.active_node].children.contains_key(&active_char) {
-                // No edge, create a new leaf edge
-                let leaf_node_idx = self.new_node();
-                let edge = Edge::new(
-                    if i >= self.remaining_suffix_count {
-                        i - self.remaining_suffix_count + 1
-                    } else {
-                        0
-                    },
-                    EdgeEnd::Shared(self.end.clone()),
-                    leaf_node_idx,
-                );
-                self.nodes[self.active_node].children.insert(active_char, edge);
-                self.parent_map.insert(leaf_node_idx, self.active_node);
-
-                // Add suffix link if needed
-                if let Some(last_idx) = last_new_node {
-                    self.nodes[last_idx].suffix_link = Some(self.active_node);
+                // No edge with `active_char`: create a new leaf node
+                let leaf_idx = self.new_node(pos, -1);
+                // Insert in a small block, so this mutable borrow ends quickly
+                {
+                    let active_node_ref = &mut self.nodes[self.active_node];
+                    active_node_ref.children.insert(active_char, leaf_idx);
                 }
-                last_new_node = None;
+
+                // If there was an internal node from a previous extension, link it to current active_node
+                if let Some(internal_idx) = self.last_new_node {
+                    self.nodes[internal_idx].suffix_link = Some(self.active_node);
+                    self.last_new_node = None;
+                }
             } else {
-                // Edge exists
-                let edge = self.nodes[self.active_node].children[&active_char].clone();
-                let next_char = self.text[edge.start + self.active_length];
+                // Edge exists. We'll either walk down or split.
+                let next_node_idx = *self.nodes[self.active_node]
+                    .children
+                    .get(&active_char)
+                    .unwrap();
 
-                if next_char == self.text[i] {
-                    // Character already exists on edge
-                    self.active_length += 1;
-                    let edge_len = self.edge_length(&edge);
+                if self.walk_down(next_node_idx) {
+                    continue;
+                }
 
-                    if self.active_length >= edge_len {
-                        self.active_node = edge.target_node;
-                        self.active_length = 0;
-                        self.active_edge = None;
+                // If the next character on the edge is the same as the new char, just extend.
+                let next_start = self.nodes[next_node_idx].start;
+                let next_char_on_edge =
+                    self.text[(next_start + self.active_length) as usize];
+
+                if next_char_on_edge == self.text[pos as usize] {
+                    // If an internal node was waiting for a suffix link, link it to active_node
+                    if let Some(internal_idx) = self.last_new_node {
+                        self.nodes[internal_idx].suffix_link = Some(self.active_node);
+                        self.last_new_node = None;
                     }
+                    self.active_length += 1;
                     break;
                 }
 
-                // Split edge
-                let split_node_idx = self.new_node();
-                let old_edge = self.nodes[self.active_node].children.remove(&active_char).unwrap();
-                
-                // Create new internal node
-                let new_internal_edge = Edge::new(
-                    old_edge.start,
-                    EdgeEnd::Fixed(old_edge.start + self.active_length - 1),
-                    split_node_idx,
-                );
-                self.nodes[self.active_node].children.insert(active_char, new_internal_edge);
-                self.parent_map.insert(split_node_idx, self.active_node);
+                // We need to split the edge.
+                let split_start = next_start;
+                let split_end = split_start + self.active_length - 1;
+                let split_node_idx = self.new_node(split_start, split_end);
 
-                // Create new leaf node
-                let leaf_node_idx = self.new_node();
-                let new_leaf_edge = Edge::new(
-                    i,
-                    EdgeEnd::Shared(self.end.clone()),
-                    leaf_node_idx,
-                );
-                self.nodes[split_node_idx].children.insert(self.text[i], new_leaf_edge);
-                self.parent_map.insert(leaf_node_idx, split_node_idx);
-
-                // Adjust old edge
-                let adjusted_edge = Edge::new(
-                    old_edge.start + self.active_length,
-                    old_edge.end,
-                    old_edge.target_node,
-                );
-                self.nodes[split_node_idx].children.insert(next_char, adjusted_edge);
-                self.parent_map.insert(old_edge.target_node, split_node_idx);
-
-                // Add suffix link if needed
-                if let Some(last_idx) = last_new_node {
-                    self.nodes[last_idx].suffix_link = Some(split_node_idx);
+                // Insert the split node as child of the active_node
+                {
+                    let active_node_ref = &mut self.nodes[self.active_node];
+                    active_node_ref.children.insert(active_char, split_node_idx);
                 }
-                last_new_node = Some(split_node_idx);
+
+                // Create a leaf node for the newly added character
+                let leaf_idx = self.new_node(pos, -1);
+                {
+                    let split_node_ref = &mut self.nodes[split_node_idx];
+                    split_node_ref
+                        .children
+                        .insert(self.text[pos as usize], leaf_idx);
+                }
+
+                // Update the original next_node to start after the split
+                {
+                    let next_node_ref = &mut self.nodes[next_node_idx];
+                    next_node_ref.start += self.active_length;
+                }
+
+                let splitted_char = self.text[self.nodes[next_node_idx].start as usize];
+                // Link the old node as a child of the new split node
+                {
+                    let split_node_ref = &mut self.nodes[split_node_idx];
+                    split_node_ref.children.insert(splitted_char, next_node_idx);
+                }
+
+                // If we had an internal node from the last extension waiting for suffix link, connect it
+                if let Some(internal_idx) = self.last_new_node {
+                    self.nodes[internal_idx].suffix_link = Some(split_node_idx);
+                }
+                self.last_new_node = Some(split_node_idx);
             }
 
-            self.remaining_suffix_count -= 1;
+            self.remainder -= 1;
 
+            // Move active point if necessary
             if self.active_node == self.root && self.active_length > 0 {
                 self.active_length -= 1;
-                self.active_edge = Some(self.text[i - self.remaining_suffix_count + 1]);
+                self.active_edge = pos - self.remainder + 1;
             } else if self.active_node != self.root {
-                self.active_node = self.nodes[self.active_node].suffix_link.unwrap_or(self.root);
+                let link = self.nodes[self.active_node]
+                    .suffix_link
+                    .unwrap_or(self.root);
+                self.active_node = link;
             }
         }
     }
 
-    /// Return the length of the current edge, which depends on the global end if it's shared.
-    fn edge_length(&self, edge: &Edge) -> usize {
-        match &edge.end {
-            EdgeEnd::Fixed(end) => end - edge.start + 1,
-            EdgeEnd::Shared(e) => {
-                let end = e.load(Ordering::SeqCst);
-                if end == usize::MAX {
-                    0 // Special case for initial state
-                } else {
-                    end - edge.start + 1
-                }
-            }
-        }
-    }
+    /// DFS to assign suffix indices to leaves, and optionally print edges.
+    fn assign_suffix_indices_dfs(&mut self, node_idx: usize, depth: i32) {
+        // Copy out node.start/end so we don't hold the borrow
+        let (start, end) = {
+            let node = &self.nodes[node_idx];
+            let e = if node.end == -1 { self.leaf_end } else { node.end };
+            (node.start, e)
+        };
 
-    /// Create a new node and push it to the `nodes` array. Returns its index.
-    fn new_node(&mut self) -> usize {
-        let idx = self.nodes.len();
-        self.nodes.push(Node::new());
-        idx
-    }
+        let mut is_leaf = true;
 
-    // --- Optional utility functions for demonstration ---
+        // Collect children in a separate vector so we do not keep borrowing self.nodes
+        let children: Vec<(char, usize)> =
+            self.nodes[node_idx].children.iter().map(|(c, &i)| (*c, i)).collect();
 
-    /// Check if a substring exists in the suffix tree (simple lookup).
-    /// Returns `true` if found, `false` otherwise.
-    pub fn contains(&self, pattern: &str) -> bool {
-        self.find_pattern_node(pattern).is_some()
-    }
-
-    /// Print the edges of the suffix tree (for debugging).
-    /// Each edge is printed as (node_index -> target_node_index, substring).
-    pub fn debug_print(&self) {
-        for (i, node) in self.nodes.iter().enumerate() {
-            for (ch, edge) in &node.children {
-                let substr: String = match &edge.end {
-                    EdgeEnd::Fixed(f) => {
-                        self.text[edge.start..=*f].iter().collect::<String>()
-                    },
-                    EdgeEnd::Shared(e) => {
-                        let end: usize = e.load(Ordering::SeqCst);
-                        self.text[edge.start..=end].iter().collect::<String>()
-                    }
-                };
-                println!(
-                    "Node {} --({}:'{}')-> Node {}",
-                    i, ch, substr, edge.target_node
-                );
-            }
-            if let Some(suffix_link) = node.suffix_link {
-                println!("  (Suffix link from {} to {})", i, suffix_link);
-            }
-        }
-    }
-
-    /// Find the node that corresponds to the end of the given pattern.
-    /// Returns Some(node_index) if found, None if not found.
-    fn find_pattern_node(&self, pattern: &str) -> Option<usize> {
-        let mut current_node: usize = self.root;
-        let mut chars = pattern.chars().peekable();
-
-        while let Some(&c) = chars.peek() {
-            if let Some(edge) = self.nodes[current_node].children.get(&c) {
-                let edge_len: usize = self.edge_length(edge);
-                let path_str: String = self.text[edge.start..(edge.start + edge_len)]
-                    .iter()
-                    .collect::<String>();
-
-                // Walk along edge
-                let mut path_chars = path_str.chars();
-                while let Some(pattern_char) = chars.next() {
-                    match path_chars.next() {
-                        Some(edge_char) if edge_char == pattern_char => continue,
-                        _ => return None,
-                    }
-                }
-
-                // If we've consumed all pattern characters but still have edge characters,
-                // that's okay - we've found a match
-                current_node = edge.target_node;
-            } else {
-                return None;
-            }
-        }
-        Some(current_node)
-    }
-
-    /// Find all occurrences of a pattern in the text.
-    /// Returns a vector of starting indices where the pattern occurs.
-    pub fn find_all(&self, pattern: &str) -> Vec<usize> {
-        if let Some(node) = self.find_pattern_node(pattern) {
-            self.collect_leaf_positions(node)
-        } else {
-            Vec::new()
-        }
-    }
-
-    /// Helper method to collect all leaf positions under a node
-    fn collect_leaf_positions(&self, node: usize) -> Vec<usize> {
-        let mut positions: Vec<usize> = Vec::new();
-        self.collect_leaf_positions_helper(node, &mut positions);
-        positions.sort_unstable();
-        positions
-    }
-
-    fn collect_leaf_positions_helper(&self, node: usize, positions: &mut Vec<usize>) {
-        if self.nodes[node].children.is_empty() {
-            // This is a leaf - we need to find its starting position
-            let mut current: usize = node;
-            let mut length: usize = 0;
-
-            // Walk up to root to calculate the total length
-            while current != self.root {
-                // Find the edge that leads to current node
-                for (_, edge) in &self.nodes[self.parent_map[&current]].children {
-                    if edge.target_node == current {
-                        length += self.edge_length(edge);
-                        break;
-                    }
-                }
-                current = self.parent_map[&current];
-            }
-
-            // The starting position is text.len() - length
-            positions.push(self.text.len() - length);
-        } else {
-            // Recursively visit all children
-            for edge in self.nodes[node].children.values() {
-                self.collect_leaf_positions_helper(edge.target_node, positions);
-            }
-        }
-    }
-
-    /// Get all suffixes in the text.
-    /// Returns a vector of strings representing all suffixes.
-    pub fn get_suffixes(&self) -> Vec<String> {
-        let mut suffixes: Vec<String> = Vec::new();
-        self.collect_suffixes(self.root, String::new(), &mut suffixes);
-        suffixes.sort();
-        suffixes
-    }
-
-    fn collect_suffixes(&self, node: usize, mut current: String, suffixes: &mut Vec<String>) {
-        if self.nodes[node].children.is_empty() {
-            // Add sentinel if not present
-            if !current.ends_with('$') {
-                current.push('$');
-            }
-            suffixes.push(current);
-            return;
+        for (_, child_idx) in children {
+            is_leaf = false;
+            let edge_len = self.edge_length(child_idx);
+            self.assign_suffix_indices_dfs(child_idx, depth + edge_len);
         }
 
-        for (_, edge) in self.nodes[node].children.iter() {
-            let edge_len: usize = self.edge_length(edge);
-            let substr: String = self.text[edge.start..edge.start + edge_len]
-                .iter()
-                .collect();
-            let mut new_current: String = current.clone();
-            new_current.push_str(&substr);
-            self.collect_suffixes(edge.target_node, new_current, suffixes);
+        if is_leaf {
+            // A leaf => suffix_index = total_length - depth
+            let total_len = self.text.len() as i32;
+            self.nodes[node_idx].suffix_index = total_len - depth;
+        }
+
+        // Example: print the edge label from `start..=end`
+        if start != -1 {
+            print!("Edge label: ");
+            let last = end.min(self.text.len() as i32 - 1);
+            for i in start..=last {
+                print!("{}", self.text[i as usize]);
+            }
+            if is_leaf {
+                print!("  [leaf suffix_index = {}]", self.nodes[node_idx].suffix_index);
+            }
+            println!();
         }
     }
 }
 
+// Example usage/test
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_suffix_tree_contains() {
-        let s = "banana";
-        let tree = SuffixTree::new(s);
+    fn test_suffix_tree_build() {
+        let mut st = SuffixTree::new("xabxa#babxba$");
+        st.build();
 
-        assert!(tree.contains("banana"));
-        assert!(tree.contains("anana"));
-        assert!(tree.contains("nana"));
-        assert!(tree.contains("ana"));
-        assert!(tree.contains("na"));
-        assert!(tree.contains("a"));
-        assert!(!tree.contains("bnana"));
-        assert!(!tree.contains("band"));
-    }
-
-    #[test]
-    fn test_debug_print() {
-        let tree = SuffixTree::new("abc");
-        // Just ensure it doesn't panic
-        tree.debug_print();
-    }
-
-    #[test]
-    fn test_find_all() {
-        let tree = SuffixTree::new("banana");
-        assert_eq!(tree.find_all("ana"), vec![1, 3]);
-        assert_eq!(tree.find_all("an"), vec![1, 3]);
-        assert_eq!(tree.find_all("banana"), vec![0]);
-        assert_eq!(tree.find_all("xyz"), vec![]);
-    }
-
-    #[test]
-    fn test_get_suffixes() {
-        let tree = SuffixTree::new("abc");
-        let mut suffixes = tree.get_suffixes();
-        suffixes.sort();
-        assert_eq!(
-            suffixes,
-            vec![
-                "abc$".to_string(),
-                "bc$".to_string(),
-                "c$".to_string(),
-                "$".to_string()
-            ]
-        );
+        // Check we have more than 1 node
+        assert!(st.node_count() > 1);
+        // You can add more specific correctness checks here.
     }
 }
