@@ -1,205 +1,181 @@
-/// Suffix Automaton implementation.
-/// 
-/// A suffix automaton is a minimal deterministic finite automaton (DFA) that recognizes
-/// all suffixes of a given string. It can be built in O(n) time and space, where n is
-/// the length of the string. The automaton can be used for pattern matching, finding
-/// the lexicographically minimal cyclic shift, and other string operations.
-/// 
-/// # Example
-/// ```
-/// use blocks_cs_string::algorithms::suffix_automaton::SuffixAutomaton;
-/// 
-/// let text = "banana";
-/// let sa = SuffixAutomaton::new(text);
-/// assert!(sa.contains("ana"));
-/// ```
-
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// A state in the suffix automaton
 #[derive(Debug, Clone)]
 struct State {
-    /// Length of the longest string in this state
+    /// Length of the longest substring that leads to this state
     len: usize,
-    /// Link to the suffix link state
+    /// Suffix link
     link: Option<usize>,
-    /// Transitions from this state
+    /// Transitions
     next: HashMap<char, usize>,
-    /// First position where this state ends in the text
-    first_pos: usize,
-    /// Whether this state is terminal (represents a suffix)
+    /// End positions for all substrings in this state
+    end_pos: HashSet<usize>,
+    /// Marks if this is a terminal state
     is_terminal: bool,
 }
 
 impl State {
-    fn new(len: usize, pos: usize) -> Self {
+    fn new(len: usize) -> Self {
         Self {
             len,
             link: None,
             next: HashMap::new(),
-            first_pos: pos,
+            end_pos: HashSet::new(),
             is_terminal: false,
         }
     }
+
+    fn add_pos(&mut self, p: usize) {
+        self.end_pos.insert(p);
+    }
 }
 
-/// A suffix automaton for efficient string pattern matching
+/// A suffix automaton for substring queries and occurrence finding.
 #[derive(Debug)]
 pub struct SuffixAutomaton {
-    /// States of the automaton
     states: Vec<State>,
-    /// Last processed state
+    /// Index of the state representing the largest‐length substring so far
     last: usize,
-    /// Original text length
+    /// Original text length (not always strictly needed)
     text_len: usize,
 }
 
 impl SuffixAutomaton {
-    /// Creates a new suffix automaton from the given text.
+    /// Constructs a suffix automaton from `text`.
     pub fn new(text: &str) -> Self {
         let mut sa = Self {
-            states: vec![State::new(0, 0)],
+            states: vec![State::new(0)], // root: length=0
             last: 0,
             text_len: text.chars().count(),
         };
-        
-        // Build the automaton by adding characters one by one
+
         for (i, ch) in text.chars().enumerate() {
             sa.extend(ch, i);
         }
-        
-        // Mark terminal states
+
+        // Mark terminal states along the suffix chain from `last`
         sa.mark_terminals();
+        // Propagate end positions in topological order
+        sa.propagate_positions();
         sa
     }
 
-    /// Extends the automaton with a new character.
+    /// Extend the automaton with character `ch` at position `pos` in the original text.
     fn extend(&mut self, ch: char, pos: usize) {
-        let curr_last = self.last;
-        let curr_state = self.states[curr_last].clone();
-        
-        // Create new state
-        let new_state = self.states.len();
-        self.states.push(State::new(curr_state.len + 1, pos));
-        
-        // Add transition from last state
-        let mut p = curr_last;
-        
-        // Find suffix links
+        let mut p = self.last;
+        // Create a new state for the extended substring
+        let cur = self.states.len();
+        self.states.push(State::new(self.states[p].len + 1));
+        self.states[cur].add_pos(pos);
+
+        // Add transitions back while no edge on `ch`
         while p != usize::MAX && !self.states[p].next.contains_key(&ch) {
-            self.states[p].next.insert(ch, new_state);
+            self.states[p].next.insert(ch, cur);
             p = self.states[p].link.unwrap_or(usize::MAX);
         }
-        
+
         if p == usize::MAX {
-            // No matching suffix found, link to root
-            self.states[new_state].link = Some(0);
+            // If we fell off the root
+            self.states[cur].link = Some(0);
         } else {
             let q = self.states[p].next[&ch];
             if self.states[p].len + 1 == self.states[q].len {
-                // Direct suffix link
-                self.states[new_state].link = Some(q);
+                // We can just link to `q`
+                self.states[cur].link = Some(q);
             } else {
-                // Clone state and create new suffix link
+                // Need to clone
                 let clone = self.states.len();
-                let mut cloned_state = self.states[q].clone();
-                cloned_state.len = self.states[p].len + 1;
-                cloned_state.first_pos = self.states[q].first_pos;
-                self.states.push(cloned_state);
-                
-                // Update transitions
-                while p != usize::MAX && self.states[p].next[&ch] == q {
+                self.states.push(State::new(self.states[p].len + 1));
+                // Copy q’s transitions and link
+                self.states[clone].next = self.states[q].next.clone();
+                self.states[clone].link = self.states[q].link;
+                // The clone initially has no end positions; they’ll be set by propagate_positions()
+
+                // Redirect transitions that pointed to q
+                while p != usize::MAX && self.states[p].next.get(&ch) == Some(&q) {
                     self.states[p].next.insert(ch, clone);
                     p = self.states[p].link.unwrap_or(usize::MAX);
                 }
-                
+                // Fix suffix links
                 self.states[q].link = Some(clone);
-                self.states[new_state].link = Some(clone);
+                self.states[cur].link = Some(clone);
             }
         }
-        
-        self.last = new_state;
+        self.last = cur;
     }
 
-    /// Marks terminal states in the automaton.
+    /// Mark all states on the link path from `last` as terminal.
     fn mark_terminals(&mut self) {
-        let mut state = self.last;
-        while state != 0 {
-            self.states[state].is_terminal = true;
-            state = self.states[state].link.unwrap_or(0);
+        let mut p = self.last;
+        while p != 0 {
+            self.states[p].is_terminal = true;
+            p = self.states[p].link.unwrap_or(0);
         }
+        // Root can also be considered terminal in some definitions
         self.states[0].is_terminal = true;
     }
 
-    /// Checks if the automaton contains the given pattern.
-    pub fn contains(&self, pattern: &str) -> bool {
-        if pattern.is_empty() {
-            return true;
-        }
+    /// Propagate end positions up the suffix‐link tree in topological order (by length).
+    fn propagate_positions(&mut self) {
+        // Sort states by length ascending
+        let mut order: Vec<usize> = (0..self.states.len()).collect();
+        order.sort_by_key(|&i| self.states[i].len);
 
-        let mut state = 0;
-        let pattern_len = pattern.chars().count();
-        let mut curr_len = 0;
-        
-        for ch in pattern.chars() {
-            match self.states[state].next.get(&ch) {
-                Some(&next) => {
-                    state = next;
-                    curr_len += 1;
-                    // Ensure we're following a continuous path
-                    if curr_len > self.states[state].len {
-                        return false;
-                    }
+        // For each state from longest to shorter, unify positions with link
+        for &i in order.iter().rev() {
+            let positions: Vec<_> = self.states[i].end_pos.iter().copied().collect();
+            if let Some(link) = self.states[i].link {
+                // unify i's positions into its link
+                for p in positions {
+                    self.states[link].add_pos(p);
                 }
+            }
+        }
+    }
+
+    /// Checks if a pattern is a substring by simply walking transitions.
+    pub fn contains(&self, pattern: &str) -> bool {
+        let mut s = 0;
+        for ch in pattern.chars() {
+            match self.states[s].next.get(&ch) {
+                Some(&nx) => s = nx,
                 None => return false,
             }
         }
-
-        // Pattern must end at a state that represents a valid substring
-        curr_len <= self.states[state].len
+        true
     }
 
-    /// Finds all occurrences of a pattern in the text.
+    /// Find all start positions of `pattern` in the original text.
     pub fn find_all(&self, pattern: &str) -> Vec<usize> {
         if pattern.is_empty() {
             return Vec::new();
         }
 
-        let mut positions = Vec::new();
-        let mut state = 0;
-        let pattern_len = pattern.chars().count();
-        let mut curr_len = 0;
-        
-        // First check if pattern exists in automaton
+        // Walk the automaton
+        let mut s = 0;
         for ch in pattern.chars() {
-            match self.states[state].next.get(&ch) {
-                Some(&next) => {
-                    state = next;
-                    curr_len += 1;
-                }
-                None => return positions,
+            match self.states[s].next.get(&ch) {
+                Some(&nx) => s = nx,
+                None => return Vec::new(),
             }
         }
-        
-        // Only proceed if we found a valid match
-        if curr_len > self.states[state].len {
-            return positions;
-        }
-        
-        // Found a match, collect positions by following suffix links
-        let mut curr_state = state;
-        while curr_state != 0 {
-            if self.states[curr_state].len >= pattern_len {
-                let pos = self.states[curr_state].first_pos + 1 - pattern_len;
-                if pos + pattern_len <= self.text_len {
-                    positions.push(pos);
+
+        // Only collect positions from the final state we reached
+        let mut result: Vec<_> = self.states[s].end_pos
+            .iter()
+            .filter_map(|&ep| {
+                let pat_len = pattern.chars().count();
+                if ep + 1 >= pat_len {
+                    Some(ep + 1 - pat_len)
+                } else {
+                    None
                 }
-            }
-            curr_state = self.states[curr_state].link.unwrap_or(0);
-        }
-        
-        positions.sort_unstable();
-        positions
+            })
+            .collect();
+        result.sort_unstable();
+        result.dedup();
+        result
     }
 }
 
@@ -211,18 +187,19 @@ mod tests {
     fn test_basic_construction() {
         let text = "banana";
         let sa = SuffixAutomaton::new(text);
-        
+
         assert!(sa.contains("ana"));
         assert!(sa.contains("ban"));
         assert!(sa.contains("na"));
-        assert!(!sa.contains("nan"));
+        // "banana" DOES contain "nan"
+        assert!(sa.contains("nan"));
     }
 
     #[test]
     fn test_find_all() {
         let text = "banana";
         let sa = SuffixAutomaton::new(text);
-        
+
         assert_eq!(sa.find_all("ana"), vec![1, 3]);
         assert_eq!(sa.find_all("na"), vec![2, 4]);
         assert_eq!(sa.find_all("a"), vec![1, 3, 5]);
@@ -234,7 +211,7 @@ mod tests {
     fn test_empty_pattern() {
         let text = "banana";
         let sa = SuffixAutomaton::new(text);
-        
+
         assert!(sa.contains(""));
         assert_eq!(sa.find_all(""), vec![]);
     }
@@ -243,11 +220,11 @@ mod tests {
     fn test_unicode_text() {
         let text = "こんにちは世界";
         let sa = SuffixAutomaton::new(text);
-        
+
         assert!(sa.contains("にち"));
         assert!(sa.contains("世界"));
         assert!(!sa.contains("世に"));
-        
+
         assert_eq!(sa.find_all("にち"), vec![2]);
         assert_eq!(sa.find_all("世界"), vec![5]);
     }
@@ -256,7 +233,7 @@ mod tests {
     fn test_overlapping_patterns() {
         let text = "aaaaa";
         let sa = SuffixAutomaton::new(text);
-        
+
         assert_eq!(sa.find_all("aa"), vec![0, 1, 2, 3]);
         assert_eq!(sa.find_all("aaa"), vec![0, 1, 2]);
     }
@@ -265,11 +242,11 @@ mod tests {
     fn test_long_text() {
         let text = "a".repeat(1000) + "b";
         let sa = SuffixAutomaton::new(&text);
-        
+
         assert!(sa.contains("aaa"));
         assert!(sa.contains("b"));
         assert!(!sa.contains("c"));
-        
+
         let positions = sa.find_all("aa");
         assert_eq!(positions.len(), 999);
     }
@@ -278,10 +255,10 @@ mod tests {
     fn test_case_sensitivity() {
         let text = "bAnAnA";
         let sa = SuffixAutomaton::new(text);
-        
+
         assert!(!sa.contains("ana"));
         assert!(sa.contains("AnA"));
-        
+
         assert_eq!(sa.find_all("ana"), vec![]);
         assert_eq!(sa.find_all("AnA"), vec![1, 3]);
     }
