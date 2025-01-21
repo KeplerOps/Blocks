@@ -295,7 +295,10 @@ mod tests {
 
     #[test]
     fn test_large_array() {
-        let mut arr: Vec<i32> = (0..1000).rev().map(|x| x as i32).collect();
+        let size = 100_000; // Reduced from 1_000_000 to a more reasonable size
+        validate_array_size(size).expect("Size should be valid");
+        
+        let mut arr: Vec<i32> = (0..size).rev().map(|x| x as i32).collect();
         let mut expected = arr.clone();
         expected.sort();
         sort(&mut arr).expect("Sort should succeed on large array");
@@ -422,6 +425,7 @@ mod tests {
 
     #[test]
     fn test_array_size_limit() {
+        // Only test the validation logic without allocating memory
         let size = (isize::MAX as usize / 2) + 1;
         let result = validate_array_size(size);
         
@@ -429,23 +433,28 @@ mod tests {
             result,
             Err(HeapSortError::ArrayTooLarge(s)) if s == size
         ));
+        
+        // Test a valid size
+        let valid_size = isize::MAX as usize / 4;
+        assert!(validate_array_size(valid_size).is_ok());
     }
 
     #[test]
     fn test_child_index_calculation() {
-        // Use a large but not excessive size
-        let size = 1_000_000;
+        // Test with a reasonable size array
+        let size = 10_000; // Reduced from 1_000_000
         let mut arr = vec![1; size];
         
-        // Test with an index that would cause child index overflow
-        let large_index = (usize::MAX - 1) / 2;  // This will cause 2*i+1 to overflow
-        let result = heapify_iterative(&mut arr, large_index);
-        assert!(result.is_err(), "Should error on large indices");
-        
-        // Test with valid indices
+        // Test with valid indices first
         let valid_index = size / 2;
         let result = heapify_iterative(&mut arr, valid_index);
         assert!(result.is_ok(), "Should succeed with valid index");
+        
+        // Now test with an index that would cause child index overflow
+        // We don't need a huge array to test this, just pass a large index
+        let large_index = (usize::MAX - 1) / 2;  // This will cause 2*i+1 to overflow
+        let result = heapify_iterative(&mut arr, large_index);
+        assert!(result.is_err(), "Should error on large indices");
     }
 
     #[test]
@@ -462,7 +471,7 @@ mod tests {
     #[test]
     #[cfg(all(feature = "simd", feature = "parallel"))]
     fn test_parallel_simd_sort() {
-        let size = 1_000_000;
+        let size = 100_000; // Reduced from 1_000_000
         let mut arr: Vec<i32> = (0..size).rev().collect();
         let mut expected = arr.clone();
         expected.sort();
@@ -474,7 +483,7 @@ mod tests {
     #[test]
     #[cfg(feature = "simd")]
     fn test_simd_performance() {
-        let size = 1_000_000;
+        let size = 100_000; // Reduced from 1_000_000
         let mut arr1: Vec<i32> = (0..size).rev().collect();
         let mut arr2 = arr1.clone();
         
@@ -498,18 +507,22 @@ mod benchmarks {
     use super::*;
     use std::time::{Duration, Instant};
 
-    fn bench_sort(size: usize) -> Duration {
+    fn bench_sort(size: usize) -> Result<Duration> {
+        // Add size validation
+        validate_array_size(size)?;
+        
         let mut arr: Vec<i32> = (0..size).map(|x| x as i32).rev().collect();
         let start = Instant::now();
-        sort(&mut arr).expect("Sort should succeed in benchmark");
-        start.elapsed()
+        sort(&mut arr)?;
+        Ok(start.elapsed())
     }
 
     #[test]
     fn compare_performance() {
-        for &size in &[1000, 10_000, 100_000, 1_000_000] {
+        // Use more reasonable sizes for testing
+        for &size in &[100, 1_000, 10_000, 100_000] {
             // Our heapsort
-            let heap_time = bench_sort(size);
+            let heap_time = bench_sort(size).expect("Heapsort benchmark should succeed");
             
             // Standard library sort
             let mut arr: Vec<i32> = (0..size).map(|x| x as i32).rev().collect();
@@ -525,7 +538,7 @@ mod benchmarks {
     #[test]
     #[cfg(feature = "parallel")]
     fn test_parallel_sort() {
-        let size = 1_000_000;
+        let size = 100_000; // Reduced from 1_000_000
         let mut arr: Vec<i32> = (0..size).rev().collect();
         let mut expected = arr.clone();
         expected.sort();

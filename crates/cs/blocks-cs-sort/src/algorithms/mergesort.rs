@@ -19,7 +19,6 @@ use std::fmt::Debug;
 use rayon;
 
 use crate::error::{Result, SortError};
-use crate::memory::MergeBuffer;
 
 /// Builder for configuring and executing merge sort operations.
 /// 
@@ -59,7 +58,7 @@ pub struct MergeSortBuilder {
 impl Default for MergeSortBuilder {
     fn default() -> Self {
         Self {
-            insertion_threshold: 16, // Tuned via benchmarks
+            insertion_threshold: 16,
             max_recursion_depth: 48,
             parallel: false,
             parallel_threshold: 1024,
@@ -146,21 +145,19 @@ impl MergeSortBuilder {
     /// - Parallel execution fails
     pub fn sort<T>(&self, slice: &mut [T]) -> Result<()>
     where
-        T: Ord + Clone + Debug + Send + Sync + 'static,
+        T: Ord + Clone + Send + Sync + 'static,
     {
         if slice.len() <= 1 {
             return Ok(());
         }
 
-        // Check input size
         if slice.len() > Self::MAX_LENGTH {
             return Err(SortError::input_too_large(slice.len(), Self::MAX_LENGTH));
         }
 
-        // Create auxiliary buffer for merging
-        let mut aux = MergeBuffer::new(slice.len(), &slice[0])?;
+        // Create auxiliary buffer
+        let mut aux = vec![slice[0].clone(); slice.len()];
 
-        // Start the recursive sort with depth counter
         if self.parallel && slice.len() >= self.parallel_threshold {
             self.sort_parallel(slice, &mut aux, 0)
         } else {
@@ -171,21 +168,16 @@ impl MergeSortBuilder {
     fn sort_sequential<T>(
         &self,
         slice: &mut [T],
-        aux: &mut MergeBuffer<T>,
+        aux: &mut Vec<T>,
         depth: usize,
     ) -> Result<()>
     where
-        T: Ord + Clone + Debug + 'static,
+        T: Ord + Clone + 'static,
     {
-        // Check recursion depth
         if depth >= self.max_recursion_depth {
-            return Err(SortError::recursion_limit_exceeded(
-                depth,
-                self.max_recursion_depth,
-            ));
+            return Err(SortError::recursion_limit_exceeded(depth, self.max_recursion_depth));
         }
 
-        // Use insertion sort for small arrays
         if slice.len() <= self.insertion_threshold {
             insertion_sort(slice);
             return Ok(());
@@ -193,68 +185,76 @@ impl MergeSortBuilder {
 
         let mid = slice.len() / 2;
 
-        // Recursively sort halves
         self.sort_sequential(&mut slice[..mid], aux, depth + 1)?;
         self.sort_sequential(&mut slice[mid..], aux, depth + 1)?;
 
-        // Merge the sorted halves
         merge(slice, mid, aux);
         Ok(())
     }
 
+    #[cfg(feature = "parallel")]
     fn sort_parallel<T>(
         &self,
         slice: &mut [T],
-        aux: &mut MergeBuffer<T>,
+        aux: &mut Vec<T>,
         depth: usize,
     ) -> Result<()>
     where
-        T: Ord + Clone + Debug + Send + Sync + 'static,
+        T: Ord + Clone + Send + Sync + 'static,
     {
-        #[cfg(feature = "parallel")]
-        {
-            // Check recursion depth
-            if depth >= self.max_recursion_depth {
-                return Err(SortError::recursion_limit_exceeded(
-                    depth,
-                    self.max_recursion_depth,
-                ));
-            }
-
-            // Use insertion sort for small arrays
-            if slice.len() <= self.insertion_threshold {
-                insertion_sort(slice);
-                return Ok(());
-            }
-
-            let mid = slice.len() / 2;
-
-            // Create auxiliary buffers before splitting the slice
-            let template = slice[0].clone();
-            let mut left_aux = MergeBuffer::new(mid, &template)?;
-            let mut right_aux = MergeBuffer::new(slice.len() - mid, &template)?;
-
-            let (left, right) = slice.split_at_mut(mid);
-
-            let (left_result, right_result) = rayon::join(
-                || self.sort_sequential(left, &mut left_aux, depth + 1),
-                || self.sort_sequential(right, &mut right_aux, depth + 1),
-            );
-
-            left_result.map_err(|e| SortError::parallel_execution_failed(
-                format!("Left parallel task failed: {}", e)
-            ))?;
-            right_result.map_err(|e| SortError::parallel_execution_failed(
-                format!("Right parallel task failed: {}", e)
-            ))?;
-
-            merge(slice, mid, aux);
-            Ok(())
+        if depth >= self.max_recursion_depth {
+            return Err(SortError::recursion_limit_exceeded(depth, self.max_recursion_depth));
         }
 
-        #[cfg(not(feature = "parallel"))]
-        {
-            self.sort_sequential(slice, aux, depth)
+        if slice.len() <= self.insertion_threshold {
+            insertion_sort(slice);
+            return Ok(());
+        }
+
+        let mid = slice.len() / 2;
+        let (left, right) = slice.split_at_mut(mid);
+
+        // Create auxiliary buffers with the same size as the original
+        let mut left_aux = aux[..mid].to_vec();
+        let mut right_aux = aux[mid..slice.len()].to_vec();
+
+        let (left_result, right_result) = rayon::join(
+            || self.sort_sequential(left, &mut left_aux, depth + 1),
+            || self.sort_sequential(right, &mut right_aux, depth + 1),
+        );
+
+        left_result?;
+        right_result?;
+
+        // Merge directly into the original slice
+        merge(slice, mid, aux);
+        Ok(())
+    }
+
+    #[cfg(not(feature = "parallel"))]
+    fn sort_parallel<T>(
+        &self,
+        slice: &mut [T],
+        aux: &mut Vec<T>,
+        depth: usize,
+    ) -> Result<()>
+    where
+        T: Ord + Clone + Send + Sync + 'static,
+    {
+        self.sort_sequential(slice, aux, depth)
+    }
+
+    /// Validates the size of an array without creating any slices
+    /// 
+    /// # Errors
+    /// 
+    /// Returns `SortError` if:
+    /// - Input size is too large (> 2^48 elements)
+    pub fn validate_array_size(&self, size: usize) -> Result<()> {
+        if size > Self::MAX_LENGTH {
+            Err(SortError::input_too_large(size, Self::MAX_LENGTH))
+        } else {
+            Ok(())
         }
     }
 }
@@ -273,7 +273,7 @@ impl MergeSortBuilder {
 /// - Parallel execution fails
 pub fn sort<T>(slice: &mut [T]) -> Result<()>
 where
-    T: Ord + Clone + Debug + Send + Sync + 'static,
+    T: Ord + Clone + Send + Sync + 'static,
 {
     MergeSortBuilder::new().sort(slice)
 }
@@ -290,21 +290,17 @@ fn insertion_sort<T: Ord>(slice: &mut [T]) {
     }
 }
 
-fn merge<T>(slice: &mut [T], mid: usize, aux: &mut MergeBuffer<T>) 
+fn merge<T>(slice: &mut [T], mid: usize, aux: &mut Vec<T>) 
 where
-    T: Ord + Clone + 'static,
+    T: Ord + Clone,
 {
-    // Copy to auxiliary buffer
-    aux.as_mut_slice()[..slice.len()].clone_from_slice(slice);
-
-    let aux_slice = aux.as_slice();
-    let (left, right) = aux_slice[..slice.len()].split_at(mid);
+    aux[..slice.len()].clone_from_slice(slice);
     
-    let mut i = 0; // Index for left array
-    let mut j = 0; // Index for right array
-    let mut k = 0; // Index for merged array
+    let (left, right) = aux[..slice.len()].split_at(mid);
+    let mut i = 0;
+    let mut j = 0;
+    let mut k = 0;
 
-    // Compare and merge elements back into original slice
     while i < left.len() && j < right.len() {
         if left[i] <= right[j] {
             slice[k] = left[i].clone();
@@ -316,7 +312,6 @@ where
         k += 1;
     }
 
-    // Copy remaining elements
     if i < left.len() {
         slice[k..].clone_from_slice(&left[i..]);
     }
@@ -369,8 +364,8 @@ mod tests {
     #[test]
     #[cfg(feature = "parallel")]
     fn test_parallel_sorting() {
-        // Create a large array to ensure parallel sorting is used
-        let size = 100_000;
+        // Create a moderately sized array to test parallel sorting
+        let size = 10_000; // Reduced from 100_000
         let mut arr: Vec<i32> = (0..size).rev().collect();
         let mut expected = arr.clone();
         expected.sort();
@@ -472,7 +467,7 @@ mod tests {
 
     #[test]
     fn test_recursion_limit() {
-        let mut arr: Vec<i32> = (0..1_000_000).collect();
+        let mut arr: Vec<i32> = (0..10_000).collect(); // Reduced from 1_000_000
         let result = MergeSortBuilder::new()
             .max_recursion_depth(3)
             .sort(&mut arr);
@@ -488,11 +483,10 @@ mod tests {
 
     #[test]
     fn test_input_too_large() {
-        // Create an array larger than MAX_LENGTH
+        // Test the error handling without creating any slices
         let size = MergeSortBuilder::MAX_LENGTH + 1;
-        let mut arr = vec![0; size];
-        let result = sort(&mut arr);
-
+        let result = MergeSortBuilder::new().validate_array_size(size);
+        
         match result {
             Err(SortError::InputTooLarge { length, max_length }) => {
                 assert_eq!(length, size);

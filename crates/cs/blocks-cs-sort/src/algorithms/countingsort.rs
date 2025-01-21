@@ -28,6 +28,7 @@
 /// - Only works with non-negative integers
 /// - Not efficient when the range of input values is much larger than n
 /// - Requires extra space proportional to the range of input
+/// - Falls back to standard library sort for ranges > 1_000_000
 pub fn sort(slice: &mut [u32]) {
     if slice.len() <= 1 {
         return;
@@ -35,6 +36,12 @@ pub fn sort(slice: &mut [u32]) {
 
     // Find the range of input array
     let max = find_max(slice);
+    
+    // If range is too large, fall back to standard library sort
+    if max > 1_000_000 {
+        slice.sort_unstable();
+        return;
+    }
     
     // Create a count array to store count of each unique value
     let mut count = vec![0; (max + 1) as usize];
