@@ -4,7 +4,8 @@ repos:
     hooks:
       - id: fmt
         name: rustfmt
-        args: ['--all', '--', '--check']
+        args: ['--all']
+        pass_filenames: false
       - id: clippy
         name: clippy
         args: ['--', '-D', 'warnings']

@@ -226,7 +226,7 @@ fn merge_heap_sections<T: Ord>(slice: &mut [T], mid: usize) -> Result<()> {
 }
 
 #[cfg(feature = "parallel")]
-fn extract_from_heap<T: Ord>(slice: &mut [T], offset: usize) -> Result<()> {
+fn extract_from_heap<T: Ord>(slice: &mut [T], _offset: usize) -> Result<()> {
     let len = slice.len();
     for i in (0..len).rev() {
         if i > 0 {

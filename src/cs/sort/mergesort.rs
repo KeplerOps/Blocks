@@ -207,11 +207,12 @@ impl MergeSortBuilder {
         }
 
         let mid = slice.len() / 2;
+        let len = slice.len(); // Get length before borrowing
         let (left, right) = slice.split_at_mut(mid);
 
         // Create auxiliary buffers with the same size as the original
         let mut left_aux = aux[..mid].to_vec();
-        let mut right_aux = aux[mid..slice.len()].to_vec();
+        let mut right_aux = aux[mid..len].to_vec();
 
         let (left_result, right_result) = rayon::join(
             || self.sort_sequential(left, &mut left_aux, depth + 1),
