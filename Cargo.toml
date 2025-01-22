@@ -1,58 +1,54 @@
-[workspace]
-resolver = "2"
-members = [
-    "crates/shared/blocks-core",
-    "crates/shared/blocks-utils",
-    "crates/shared/blocks-tests",
-    # Computer Science
-    "crates/cs/blocks-cs-core",
-    "crates/cs/blocks-cs-sort",
-    "crates/cs/blocks-cs-search",
-    "crates/cs/blocks-cs-string",
-    "crates/cs/blocks-cs-tree",
-    "crates/cs/blocks-cs-dp",
-    "crates/cs/blocks-cs-dist",
-    "crates/cs/blocks-cs-mem",
-    "crates/cs/blocks-cs-txn",
-    "crates/cs/blocks-cs-sched",
-    "crates/cs/blocks-cs-hpc",
-    "crates/cs/blocks-cs-hash",
-    "crates/cs/blocks-cs-sec",
-    "crates/cs/blocks-cs-comp",
-    "crates/cs/blocks-cs-ecc",
-    "crates/cs/blocks-cs-stream",
-    "crates/cs/blocks-cs-quantum",
-    "crates/cs/blocks-cs-graph",
-    # Mathematics
-    "crates/math/blocks-math-core",
-    "crates/math/blocks-math-num",
-    "crates/math/blocks-math-geometry",
-    "crates/math/blocks-math-combo",
-    "crates/math/blocks-math-optim",
-    "crates/math/blocks-math-ilp",
-    "crates/math/blocks-math-sat",
-    # Statistics
-    "crates/stats/blocks-stats-core",
-    "crates/stats/blocks-stats-bayesian",
-    "crates/stats/blocks-stats-rand",
-    "crates/stats/blocks-stats-signal",
-    "crates/stats/blocks-stats-prob",
-    "crates/stats/blocks-stats-approx",
-    # Machine Learning
-    "crates/ml/blocks-ml-core",
-    "crates/ml/blocks-ml-classic",
-    "crates/ml/blocks-ml-deep",
-    "crates/ml/blocks-ml-rl",
-    "crates/ml/blocks-ml-cv",
-    "crates/ml/blocks-ml-nlp",
-    "crates/ml/blocks-ml-game-search"
-]
-
-[workspace.package]
-version = "0.1.0-alpha.1"
+[package]
+name = "Blocks"
+version = "0.1.0"
 edition = "2021"
-authors = ["Brad Edwards <brad@keplerops.com>"]
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/atomiklabs/blocks"
+authors = ["Brad Edwards"]
+description = "A collection of algorithms and data structures"
+license = "MIT"
+repository = "https://github.com/KeplerOps/Blocks"
+readme = "README.md"
+keywords = ["algorithms", "data-structures", "computer-science"]
+categories = ["algorithms", "data-structures"]
 
-[workspace.dependencies]
+[dependencies]
+thiserror = "1.0.57"
+num-traits = "0.2.17"
+rayon = "1.8.1"
+
+[dev-dependencies]
+criterion = "0.5.1"
+
+[[bench]]
+name = "suffix_array"
+path = "benches/cs/string/suffix_array.rs"
+harness = false
+
+[[bench]]
+name = "heapsort"
+path = "benches/cs/sort/heapsort_benchmarks.rs"
+harness = false
+
+[[bench]]
+name = "quicksort"
+path = "benches/cs/sort/quicksort_benchmarks.rs"
+harness = false
+
+[[bench]]
+name = "sorting"
+path = "benches/cs/sort/sorting_benchmarks.rs"
+harness = false
+
+[[bench]]
+name = "std_sort"
+path = "benches/cs/sort/std_sort_benchmarks.rs"
+harness = false
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = 'abort'
+
+[profile.dev]
+opt-level = 0
+debug = true
