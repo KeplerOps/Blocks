@@ -36,12 +36,8 @@ impl State {
 pub struct SuffixAutomaton {
     /// The states of the automaton
     states: Vec<State>,
-    /// The initial state
-    initial: usize,
     /// The last state that was added
     last: usize,
-    /// The text that was used to build the automaton
-    text: Vec<char>,
 }
 
 impl SuffixAutomaton {
@@ -49,9 +45,7 @@ impl SuffixAutomaton {
     pub fn new(text: &str) -> Self {
         let mut sa = Self {
             states: vec![State::new(0)], // root: length=0
-            initial: 0,
             last: 0,
-            text: text.chars().collect(),
         };
 
         for (i, ch) in text.chars().enumerate() {

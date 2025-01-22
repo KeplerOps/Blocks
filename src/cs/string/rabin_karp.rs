@@ -43,7 +43,7 @@ fn compute_pattern_hash(pattern: &[u8], m: usize) -> (u64, u64) {
 ///
 /// # Example
 /// ```
-/// use Blocks::cs::string::rabin_karp;
+/// use blocks::cs::string::rabin_karp;
 ///
 /// let text = "AABAACAADAABAAABAA";
 /// let pattern = "AABA";
@@ -114,7 +114,7 @@ pub fn find_all(text: impl AsRef<[u8]>, pattern: impl AsRef<[u8]>) -> Result<Vec
 ///
 /// # Example
 /// ```
-/// use Blocks::cs::string::rabin_karp;
+/// use blocks::cs::string::rabin_karp;
 ///
 /// let text = "AABAACAADAABAAABAA";
 /// let pattern = "AABA";

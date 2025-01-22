@@ -26,9 +26,9 @@
 /// 
 /// # Examples
 /// ```
-/// use Blocks::cs::sort::heapsort::sort;
+/// use blocks::cs::sort::heap_sort;
 /// let mut numbers = vec![3, 1, 4, 1, 5, 9, 2, 6, 5, 3];
-/// sort(&mut numbers).expect("Sort should succeed");
+/// heap_sort(&mut numbers).expect("Sort should succeed");
 /// assert_eq!(numbers, vec![1, 1, 2, 3, 3, 4, 5, 5, 6, 9]);
 /// ```
 /// 

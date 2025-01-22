@@ -48,7 +48,7 @@ fn compute_lps(pattern: &[u8]) -> Vec<usize> {
 ///
 /// # Example
 /// ```
-/// use Blocks::cs::string::kmp;
+/// use blocks::cs::string::kmp;
 ///
 /// let text = "AABAACAADAABAAABAA";
 /// let pattern = "AABA";
@@ -108,7 +108,7 @@ pub fn find_all(text: impl AsRef<[u8]>, pattern: impl AsRef<[u8]>) -> Result<Vec
 ///
 /// # Example
 /// ```
-/// use Blocks::cs::string::kmp;
+/// use blocks::cs::string::kmp;
 ///
 /// let text = "AABAACAADAABAAABAA";
 /// let pattern = "AABA";

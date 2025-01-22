@@ -9,14 +9,16 @@ pub mod radixsort;
 pub mod selectionsort;
 pub mod shellsort;
 
-// Re-export all sorting algorithms
-pub use bubblesort::*;
-pub use bucketsort::*;
-pub use countingsort::*;
-pub use heapsort::*;
-pub use insertionsort::*;
-pub use mergesort::*;
-pub use quicksort::*;
-pub use radixsort::*;
-pub use selectionsort::*;
-pub use shellsort::*;
+// Re-export sorting algorithms with descriptive names
+pub use bubblesort::sort as bubble_sort;
+pub use bucketsort::sort as bucket_sort;
+pub use countingsort::sort as counting_sort;
+pub use heapsort::{sort as heap_sort, HeapSortError};
+#[cfg(feature = "simd")]
+pub use heapsort::sort_i32 as heap_sort_i32;
+pub use insertionsort::sort as insertion_sort;
+pub use mergesort::{sort as merge_sort, MergeSortBuilder};
+pub use quicksort::sort as quick_sort;
+pub use radixsort::sort as radix_sort;
+pub use selectionsort::sort as selection_sort;
+pub use shellsort::sort as shell_sort;

@@ -14,7 +14,7 @@ use crate::cs::error::{Result, Error};
 ///
 /// # Examples
 /// ```
-/// # use Blocks::cs::search::sublist;
+/// # use blocks::cs::search::sublist;
 /// #
 /// let data = vec![1, 2, 3, 4, 5, 6];
 /// let pattern = vec![3, 4, 5];
@@ -77,7 +77,7 @@ pub fn search<T: PartialEq>(data: &[T], pattern: &[T]) -> Result<Option<usize>> 
 ///
 /// # Examples
 /// ```
-/// # use Blocks::cs::search::sublist;
+/// # use blocks::cs::search::sublist;
 /// #
 /// let data = vec![1, 2, 1, 2, 1, 2, 3];
 /// let pattern = vec![1, 2, 3];

@@ -14,7 +14,7 @@ use crate::cs::error::{Result, Error};
 ///
 /// # Examples
 /// ```
-/// # use Blocks::cs::search::ternary;
+/// # use blocks::cs::search::ternary;
 /// #
 /// let numbers = vec![1, 2, 3, 4, 5, 6];
 /// assert!(matches!(ternary::search(&numbers, &4).unwrap(), Some(3)));

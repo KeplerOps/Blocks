@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion, BatchSize};
-use blocks_cs_sort::algorithms::quicksort;
+use blocks::cs::sort::quick_sort;
 mod common;
 use common::{generate_data, SIZES, DISTRIBUTIONS};
 
@@ -13,7 +13,7 @@ fn benchmark_quicksort(c: &mut Criterion) {
             group.bench_function(&bench_name, |b| {
                 b.iter_batched(
                     || generate_data(size, dist),
-                    |mut data| quicksort::sort(&mut data),
+                    |mut data| quick_sort(&mut data),
                     BatchSize::LargeInput,
                 )
             });
@@ -36,7 +36,7 @@ fn benchmark_parallel_quicksort(c: &mut Criterion) {
             group.bench_function(&bench_name, |b| {
                 b.iter_batched(
                     || generate_data(size, dist),
-                    |mut data| quicksort::sort(&mut data),
+                    |mut data| quick_sort(&mut data),
                     BatchSize::LargeInput,
                 )
             });
@@ -57,7 +57,7 @@ fn benchmark_simd_sort(c: &mut Criterion) {
             group.bench_function(&bench_name, |b| {
                 b.iter_batched(
                     || generate_data(size, dist),
-                    |mut data| quicksort::sort_i32(&mut data).expect("Sort should succeed"),
+                    |mut data| quick_sort(&mut data),
                     BatchSize::LargeInput,
                 )
             });

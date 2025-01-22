@@ -16,7 +16,7 @@ use std::cmp::Ord;
 ///
 /// # Examples
 /// ```
-/// # use Blocks::cs::search::interpolation;
+/// # use blocks::cs::search::interpolation;
 /// #
 /// let numbers = vec![1, 2, 3, 4, 5, 6];
 /// assert!(matches!(interpolation::search(&numbers, &4).unwrap(), Some(3)));

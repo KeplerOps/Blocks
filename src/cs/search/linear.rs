@@ -1,4 +1,4 @@
-use crate::cs::error::{Result, Error};
+use crate::cs::error::Result;
 use rayon::prelude::*;
 
 /// Threshold for switching to parallel search
@@ -18,7 +18,7 @@ const PARALLEL_THRESHOLD: usize = 1024;
 ///
 /// # Examples
 /// ```
-/// # use Blocks::cs::search::linear;
+/// # use blocks::cs::search::linear;
 /// #
 /// let numbers = vec![3, 1, 4, 1, 5, 9];
 /// assert!(matches!(linear::search(&numbers, &4).unwrap(), Some(2)));

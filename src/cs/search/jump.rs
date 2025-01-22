@@ -14,7 +14,7 @@ use crate::cs::error::{Result, Error};
 ///
 /// # Examples
 /// ```
-/// # use Blocks::cs::search::jump;
+/// # use blocks::cs::search::jump;
 /// #
 /// let numbers = vec![1, 2, 3, 4, 5, 6];
 /// assert!(matches!(jump::search(&numbers, &4).unwrap(), Some(3)));

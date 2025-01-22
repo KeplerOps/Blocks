@@ -45,7 +45,7 @@ where
     ///
     /// # Examples
     /// ```
-    /// # use Blocks::cs::search::bfs::Graph;
+    /// # use blocks::cs::search::bfs::Graph;
     /// #
     /// let mut graph = Graph::new();
     /// graph.add_edge(1, 2);

@@ -13,7 +13,7 @@ use crate::cs::error::{Result, Error};
 ///
 /// # Examples
 /// ```
-/// # use Blocks::cs::search::binary;
+/// # use blocks::cs::search::binary;
 /// #
 /// let numbers = vec![1, 2, 3, 4, 5, 6];
 /// assert!(matches!(binary::search(&numbers, &4).unwrap(), Some(3)));

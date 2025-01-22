@@ -9,44 +9,6 @@ fn build_bad_char_table(pattern: &[u8]) -> HashMap<u8, usize> {
     bad_char
 }
 
-fn build_good_suffix_table(pattern: &[u8]) -> Vec<usize> {
-    let m = pattern.len();
-    let mut suffix = vec![0; m];
-    let mut g = vec![m; m];
-    let mut f = vec![0; m];
-    
-    let mut i = m - 1;
-    let mut j = m;
-    f[i] = j;
-    while i > 0 {
-        while j < m && pattern[i - 1] != pattern[j - 1] {
-            if g[j] == m {
-                g[j] = j - i;
-            }
-            j = f[j];
-        }
-        i -= 1;
-        j -= 1;
-        f[i] = j;
-    }
-
-    j = f[0];
-    for i in 0..m {
-        if g[i] == m {
-            g[i] = m;
-        }
-        if i == j {
-            j = f[j];
-        }
-    }
-
-    for i in 0..m {
-        suffix[i] = if i == m - 1 { 1 } else { g[i] };
-    }
-    
-    suffix
-}
-
 pub fn find_all(text: impl AsRef<[u8]>, pattern: impl AsRef<[u8]>) -> Result<Vec<usize>> {
     let text = text.as_ref();
     let pattern = pattern.as_ref();
@@ -249,13 +211,5 @@ mod tests {
         let bad_char = build_bad_char_table(pattern.as_bytes());
         assert_eq!(bad_char.get(&b'B'), Some(&2));
         assert_eq!(bad_char.get(&b'A'), Some(&1));
-    }
-
-    #[test]
-    fn test_good_suffix_rule() {
-        let pattern = "BAOBAB";
-        let good_suffix = build_good_suffix_table(pattern.as_bytes());
-        assert_eq!(good_suffix[0], 6);
-        assert_eq!(good_suffix[5], 1);
     }
 }

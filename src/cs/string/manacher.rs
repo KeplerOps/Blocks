@@ -10,7 +10,7 @@ both odd and even-length palindromes uniformly.
 
 # Example
 ```rust
-use Blocks::cs::string::manacher;
+use blocks::cs::string::manacher;
 
 let text = "babad";
 let result = manacher::longest_palindrome(text).unwrap();
@@ -34,7 +34,7 @@ use crate::error::{Result, StringError};
 ///
 /// # Examples
 /// ```
-/// use Blocks::cs::string::manacher;
+/// use blocks::cs::string::manacher;
 ///
 /// let text = "babad";
 /// let result = manacher::longest_palindrome(text).unwrap();

@@ -1,4 +1,3 @@
-use crate::cs::error::Result;
 use std::collections::VecDeque;
 
 /// A generic rolling hash struct based on polynomial rolling.
@@ -29,7 +28,7 @@ impl<const B: u64, const M: u64> RollingHash<B, M> {
     ///
     /// # Example
     /// ```
-    /// use Blocks::cs::string::rolling_hash::RollingHash;
+    /// use blocks::cs::string::rolling_hash::RollingHash;
     ///
     /// let rh: RollingHash<257, 1_000_000_007> = RollingHash::new();
     /// ```
@@ -46,7 +45,7 @@ impl<const B: u64, const M: u64> RollingHash<B, M> {
     ///
     /// # Example
     /// ```
-    /// use Blocks::cs::string::rolling_hash::RollingHash;
+    /// use blocks::cs::string::rolling_hash::RollingHash;
     ///
     /// let mut rh: RollingHash<257, 1_000_000_007> = RollingHash::new();
     /// rh.push(b'a');
@@ -67,7 +66,7 @@ impl<const B: u64, const M: u64> RollingHash<B, M> {
     ///
     /// # Example
     /// ```
-    /// use Blocks::cs::string::rolling_hash::RollingHash;
+    /// use blocks::cs::string::rolling_hash::RollingHash;
     ///
     /// let mut rh: RollingHash<257, 1_000_000_007> = RollingHash::new();
     /// rh.push(b'a');
@@ -93,7 +92,7 @@ impl<const B: u64, const M: u64> RollingHash<B, M> {
     ///
     /// # Example
     /// ```
-    /// use Blocks::cs::string::rolling_hash::RollingHash;
+    /// use blocks::cs::string::rolling_hash::RollingHash;
     ///
     /// let mut rh: RollingHash<257, 1_000_000_007> = RollingHash::new();
     /// rh.push(b'a');

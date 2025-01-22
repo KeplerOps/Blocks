@@ -1,5 +1,4 @@
 use std::collections::TryReserveError;
-use std::error::Error as StdError;
 use std::fmt::Display;
 use thiserror::Error;
 
@@ -61,6 +60,10 @@ pub enum Error {
 /// Result type for algorithm operations
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// Common error types for algorithm operations.
+/// Note: Many modules define their own specific error types (e.g., HeapSortError)
+/// for more precise error handling. These common errors are provided for
+/// standardization across modules where appropriate.
 impl Error {
     pub(crate) fn empty_pattern() -> Self {
         Self::EmptyPattern
@@ -77,32 +80,11 @@ impl Error {
         Self::RecursionLimitExceeded { depth, max_depth }
     }
 
-    pub(crate) fn allocation_failed(reason: impl Display, source: Option<TryReserveError>) -> Self {
-        Self::AllocationFailed {
-            reason: reason.to_string(),
-            source,
-        }
-    }
-
-    pub(crate) fn parallel_execution_failed(reason: impl Display) -> Self {
-        Self::ParallelExecutionFailed {
-            reason: reason.to_string(),
-        }
-    }
-
     pub(crate) fn input_too_large(length: usize, max_length: usize) -> Self {
         Self::InputTooLarge {
             length,
             max_length,
         }
-    }
-
-    pub(crate) fn index_out_of_bounds(msg: impl Display) -> Self {
-        Self::IndexOutOfBounds(msg.to_string())
-    }
-
-    pub(crate) fn unsupported(msg: impl Display) -> Self {
-        Self::Unsupported(msg.to_string())
     }
 
     pub(crate) fn invalid_input(msg: impl Display) -> Self {
@@ -125,33 +107,31 @@ mod tests {
         let err = Error::recursion_limit_exceeded(100, 50);
         assert_eq!(err.to_string(), "Recursion depth 100 exceeded maximum allowed depth of 50");
 
-        let err = Error::allocation_failed("failed to allocate buffer", None);
-        assert_eq!(err.to_string(), "Failed to allocate memory: failed to allocate buffer");
-
-        let err = Error::parallel_execution_failed("thread panic");
-        assert_eq!(err.to_string(), "Parallel execution failed: thread panic");
-
         let err = Error::input_too_large(1_000_000, 100_000);
         assert_eq!(err.to_string(), "Input length 1000000 exceeds maximum supported length of 100000");
-
-        let err = Error::index_out_of_bounds("array index 5 out of bounds");
-        assert_eq!(err.to_string(), "Index out of bounds: array index 5 out of bounds");
-
-        let err = Error::unsupported("operation X not implemented");
-        assert_eq!(err.to_string(), "Operation not supported: operation X not implemented");
 
         let err = Error::invalid_input("invalid UTF-8");
         assert_eq!(err.to_string(), "Invalid input: invalid UTF-8");
     }
 
     #[test]
-    fn test_error_sources() {
-        let mut v: Vec<i32> = Vec::new();
-        let err = v.try_reserve(usize::MAX).unwrap_err();
-        let err = Error::allocation_failed("failed to allocate", Some(err));
-        assert!(err.source().is_some());
+    fn test_error_variants() {
+        // Test that error variants exist but are handled by specific modules
+        let err = Error::AllocationFailed {
+            reason: "test".to_string(),
+            source: None,
+        };
+        assert!(err.to_string().contains("Failed to allocate memory"));
 
-        let err = Error::recursion_limit_exceeded(10, 5);
-        assert!(err.source().is_none());
+        let err = Error::ParallelExecutionFailed {
+            reason: "test".to_string(),
+        };
+        assert!(err.to_string().contains("Parallel execution failed"));
+
+        let err = Error::IndexOutOfBounds("test".to_string());
+        assert!(err.to_string().contains("Index out of bounds"));
+
+        let err = Error::Unsupported("test".to_string());
+        assert!(err.to_string().contains("Operation not supported"));
     }
 }

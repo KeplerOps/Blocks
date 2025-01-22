@@ -60,7 +60,7 @@ fn compute_z_array(pattern: &[u8]) -> Vec<usize> {
 ///
 /// # Example
 /// ```
-/// use Blocks::cs::string::z_algorithm;
+/// use blocks::cs::string::z_algorithm;
 ///
 /// let text = "AABAACAADAABAAABAA";
 /// let pattern = "AABA";
@@ -122,7 +122,7 @@ pub fn find_all(text: impl AsRef<[u8]>, pattern: impl AsRef<[u8]>) -> Result<Vec
 ///
 /// # Example
 /// ```
-/// use Blocks::cs::string::z_algorithm;
+/// use blocks::cs::string::z_algorithm;
 ///
 /// let text = "AABAACAADAABAAABAA";
 /// let pattern = "AABA";

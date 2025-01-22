@@ -16,7 +16,7 @@ use crate::cs::error::{Result, Error};
 ///
 /// # Examples
 /// ```
-/// # use Blocks::cs::search::fibonacci;
+/// # use blocks::cs::search::fibonacci;
 /// #
 /// let numbers = vec![1, 2, 3, 4, 5, 6];
 /// assert!(matches!(fibonacci::search(&numbers, &4).unwrap(), Some(3)));

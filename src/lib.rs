@@ -1,7 +1,5 @@
 pub mod cs;
 pub mod error;
 
-// Re-export the cs module at the root level
-pub use cs::*;
-// Re-export error types
-pub use error::*;
+pub use error::{Error, Result};
+pub use cs::{search, sort, string};

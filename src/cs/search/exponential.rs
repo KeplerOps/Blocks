@@ -15,7 +15,7 @@ use crate::cs::error::{Result, Error};
 ///
 /// # Examples
 /// ```
-/// # use Blocks::cs::search::exponential;
+/// # use blocks::cs::search::exponential;
 /// #
 /// let numbers = vec![1, 2, 3, 4, 5, 6];
 /// assert!(matches!(exponential::search(&numbers, &4).unwrap(), Some(3)));

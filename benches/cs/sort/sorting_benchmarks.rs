@@ -1,6 +1,7 @@
-use blocks_cs_sort::algorithms::mergesort::MergeSortBuilder;
+use blocks::cs::sort::MergeSortBuilder;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use rand::prelude::*;
+use rand::rngs::StdRng;
 
 fn generate_random_array(size: usize) -> Vec<i32> {
     let mut rng = StdRng::seed_from_u64(42); // Fixed seed for reproducibility

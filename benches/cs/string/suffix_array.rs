@@ -1,4 +1,4 @@
-use blocks_cs_string::algorithms::suffix_array::SuffixArray;
+use blocks::cs::string::suffix_array::SuffixArray;
 use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
 
 const BENCH_TEXT: &str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.";
@@ -22,7 +22,7 @@ fn bench_suffix_array(c: &mut Criterion) {
     for size in text_sizes.iter() {
         let text = "a".repeat(*size) + "b";
         let sa = SuffixArray::new(&text);
-        group.bench_with_input(BenchmarkId::new("search/text_size", size), size, |b, &size| {
+        group.bench_with_input(BenchmarkId::new("search/text_size", size), size, |b, _| {
             b.iter(|| black_box(sa.find_all("aaa").unwrap()))
         });
     }
