@@ -4,9 +4,50 @@
 
 This document defines the planned security process for the Blocks ecosystem. Note that as of December 2024, this process is in early planning stages and will be implemented incrementally.
 
-## Initial Security Measures (Q1 2024)
+## Current Security Measures
 
-### 1. Basic Security Checks
+### 1. Pre-commit Security Checks
+
+We use pre-commit hooks to enforce security checks before each commit:
+
+```yaml
+# .pre-commit-config.yaml
+hooks:
+  - id: cargo-audit
+    name: security audit
+    description: Check dependencies for security vulnerabilities
+    entry: cargo audit
+
+  - id: cargo-geiger
+    name: unsafe code check
+    description: Scan for usage of unsafe code
+    entry: cargo geiger
+
+  - id: cargo-deny
+    name: dependency check
+    description: Check dependencies for security, license compliance, etc.
+    entry: cargo deny check
+```
+
+The security checks include:
+
+- Dependency vulnerability scanning (cargo-audit)
+- Unsafe code detection (cargo-geiger)
+- License compliance and security policy enforcement (cargo-deny)
+- Code quality checks (clippy)
+- Test coverage verification (tarpaulin)
+
+### 2. Security Policies
+
+Security policies are defined in `deny.toml`:
+
+- Vulnerability alerts are treated as errors
+- Unmaintained and yanked dependencies trigger warnings
+- Only approved licenses (MIT, Apache-2.0, BSD-3-Clause, ISC) are allowed
+- Unknown git sources are denied
+- Multiple dependency versions trigger warnings
+
+### 3. CI Security Checks
 
 ```yaml
 # .github/workflows/security.yml
@@ -22,13 +63,15 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Security audit
-        run: cargo audit
-
+        run: |
+          cargo audit
+          cargo deny check
+          cargo geiger
 ```
 
 ### 2. Vulnerability Reporting
 
-Please report security vulnerabilities by emailing security@blocks.rs (not yet active).
+Please report security vulnerabilities by emailing <security@blocks.rs> (not yet active).
 
 ## Planned Features (Q2 2024)
 
@@ -122,7 +165,7 @@ pub fn analyze_security() -> SecurityAnalysis {
 }
 ```
 
-### 2. Report Generation
+### 2. Automated Report Generation
 
 ```rust
 // tools/src/reports.rs
@@ -258,4 +301,4 @@ pub fn generate_advisory(finding: &Finding) -> Advisory {
         affected_versions: find_affected_versions(),
         patched_versions: None,
     }
-} 
+}
