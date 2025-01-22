@@ -1,6 +1,7 @@
 pub mod aho_corasick;
 pub mod boyer_moore;
 pub mod kmp;
+pub mod manacher;
 pub mod rabin_karp;
 pub mod rolling_hash;
 pub mod suffix_array;
