@@ -7,7 +7,7 @@
 ///
 /// # Example
 /// ```
-/// use blocks_cs_string::algorithms::suffix_array::SuffixArray;
+/// use Blocks::cs::string::suffix_array::SuffixArray;
 /// 
 /// let text = "banana";
 /// let sa = SuffixArray::new(text);

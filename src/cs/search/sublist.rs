@@ -1,4 +1,4 @@
-use crate::error::{Result, SearchError};
+use crate::cs::error::{Result, Error};
 
 /// Performs a sublist search to find a pattern within a larger list.
 /// Returns the starting index of the first occurrence of the pattern.
@@ -10,18 +10,18 @@ use crate::error::{Result, SearchError};
 /// # Returns
 /// * `Ok(Some(index))` - The starting index of the first occurrence of the pattern
 /// * `Ok(None)` - The pattern was not found
-/// * `Err(SearchError)` - An error occurred during the search
+/// * `Err(Error)` - An error occurred during the search
 ///
 /// # Examples
 /// ```
-/// use blocks_cs_search::algorithms::sublist;
-///
+/// # use Blocks::cs::search::sublist;
+/// #
 /// let data = vec![1, 2, 3, 4, 5, 6];
 /// let pattern = vec![3, 4, 5];
-/// assert_eq!(sublist::search(&data, &pattern), Ok(Some(2)));
+/// assert!(matches!(sublist::search(&data, &pattern).unwrap(), Some(2)));
 ///
 /// let not_found = vec![7, 8];
-/// assert_eq!(sublist::search(&data, &not_found), Ok(None));
+/// assert!(matches!(sublist::search(&data, &not_found).unwrap(), None));
 /// ```
 ///
 /// # Performance
@@ -32,9 +32,7 @@ use crate::error::{Result, SearchError};
 /// * `T: PartialEq` - The type must support equality comparison
 pub fn search<T: PartialEq>(data: &[T], pattern: &[T]) -> Result<Option<usize>> {
     if pattern.is_empty() {
-        return Err(SearchError::InvalidInput(
-            "Pattern cannot be empty".to_string(),
-        ));
+        return Err(Error::invalid_input("Pattern cannot be empty"));
     }
 
     if data.is_empty() {
@@ -75,15 +73,15 @@ pub fn search<T: PartialEq>(data: &[T], pattern: &[T]) -> Result<Option<usize>> 
 /// # Returns
 /// * `Ok(Some(index))` - The starting index of the first occurrence of the pattern
 /// * `Ok(None)` - The pattern was not found
-/// * `Err(SearchError)` - An error occurred during the search
+/// * `Err(Error)` - An error occurred during the search
 ///
 /// # Examples
 /// ```
-/// use blocks_cs_search::algorithms::sublist;
-///
+/// # use Blocks::cs::search::sublist;
+/// #
 /// let data = vec![1, 2, 1, 2, 1, 2, 3];
 /// let pattern = vec![1, 2, 3];
-/// assert_eq!(sublist::search_kmp(&data, &pattern), Ok(Some(4)));
+/// assert!(matches!(sublist::search_kmp(&data, &pattern).unwrap(), Some(4)));
 /// ```
 ///
 /// # Performance
@@ -94,9 +92,7 @@ pub fn search<T: PartialEq>(data: &[T], pattern: &[T]) -> Result<Option<usize>> 
 /// * `T: PartialEq` - The type must support equality comparison
 pub fn search_kmp<T: PartialEq>(data: &[T], pattern: &[T]) -> Result<Option<usize>> {
     if pattern.is_empty() {
-        return Err(SearchError::InvalidInput(
-            "Pattern cannot be empty".to_string(),
-        ));
+        return Err(Error::invalid_input("Pattern cannot be empty"));
     }
 
     if data.is_empty() {
@@ -165,8 +161,8 @@ mod tests {
     fn test_empty_data() {
         let data: Vec<i32> = vec![];
         let pattern = vec![1, 2];
-        assert_eq!(search(&data, &pattern), Ok(None));
-        assert_eq!(search_kmp(&data, &pattern), Ok(None));
+        assert!(matches!(search(&data, &pattern).unwrap(), None));
+        assert!(matches!(search_kmp(&data, &pattern).unwrap(), None));
     }
 
     #[test]
@@ -175,11 +171,11 @@ mod tests {
         let pattern: Vec<i32> = vec![];
         assert!(matches!(
             search(&data, &pattern),
-            Err(SearchError::InvalidInput(_))
+            Err(Error::InvalidInput(_))
         ));
         assert!(matches!(
             search_kmp(&data, &pattern),
-            Err(SearchError::InvalidInput(_))
+            Err(Error::InvalidInput(_))
         ));
     }
 
@@ -187,87 +183,87 @@ mod tests {
     fn test_pattern_longer_than_data() {
         let data = vec![1, 2];
         let pattern = vec![1, 2, 3];
-        assert_eq!(search(&data, &pattern), Ok(None));
-        assert_eq!(search_kmp(&data, &pattern), Ok(None));
+        assert!(matches!(search(&data, &pattern).unwrap(), None));
+        assert!(matches!(search_kmp(&data, &pattern).unwrap(), None));
     }
 
     #[test]
     fn test_simple_match() {
         let data = vec![1, 2, 3, 4, 5];
         let pattern = vec![2, 3];
-        assert_eq!(search(&data, &pattern), Ok(Some(1)));
-        assert_eq!(search_kmp(&data, &pattern), Ok(Some(1)));
+        assert!(matches!(search(&data, &pattern).unwrap(), Some(1)));
+        assert!(matches!(search_kmp(&data, &pattern).unwrap(), Some(1)));
     }
 
     #[test]
     fn test_match_at_start() {
         let data = vec![1, 2, 3, 4, 5];
         let pattern = vec![1, 2];
-        assert_eq!(search(&data, &pattern), Ok(Some(0)));
-        assert_eq!(search_kmp(&data, &pattern), Ok(Some(0)));
+        assert!(matches!(search(&data, &pattern).unwrap(), Some(0)));
+        assert!(matches!(search_kmp(&data, &pattern).unwrap(), Some(0)));
     }
 
     #[test]
     fn test_match_at_end() {
         let data = vec![1, 2, 3, 4, 5];
         let pattern = vec![4, 5];
-        assert_eq!(search(&data, &pattern), Ok(Some(3)));
-        assert_eq!(search_kmp(&data, &pattern), Ok(Some(3)));
+        assert!(matches!(search(&data, &pattern).unwrap(), Some(3)));
+        assert!(matches!(search_kmp(&data, &pattern).unwrap(), Some(3)));
     }
 
     #[test]
     fn test_no_match() {
         let data = vec![1, 2, 3, 4, 5];
         let pattern = vec![2, 4];
-        assert_eq!(search(&data, &pattern), Ok(None));
-        assert_eq!(search_kmp(&data, &pattern), Ok(None));
+        assert!(matches!(search(&data, &pattern).unwrap(), None));
+        assert!(matches!(search_kmp(&data, &pattern).unwrap(), None));
     }
 
     #[test]
     fn test_with_repeating_elements() {
         let data = vec![1, 2, 1, 2, 1, 2, 3];
         let pattern = vec![1, 2, 3];
-        assert_eq!(search(&data, &pattern), Ok(Some(4)));
-        assert_eq!(search_kmp(&data, &pattern), Ok(Some(4)));
+        assert!(matches!(search(&data, &pattern).unwrap(), Some(4)));
+        assert!(matches!(search_kmp(&data, &pattern).unwrap(), Some(4)));
     }
 
     #[test]
     fn test_with_strings() {
         let data = vec!["apple", "banana", "cherry", "date"];
         let pattern = vec!["banana", "cherry"];
-        assert_eq!(search(&data, &pattern), Ok(Some(1)));
-        assert_eq!(search_kmp(&data, &pattern), Ok(Some(1)));
+        assert!(matches!(search(&data, &pattern).unwrap(), Some(1)));
+        assert!(matches!(search_kmp(&data, &pattern).unwrap(), Some(1)));
     }
 
     #[test]
     fn test_overlapping_pattern() {
         let data = vec![1, 1, 1, 1];
         let pattern = vec![1, 1];
-        assert_eq!(search(&data, &pattern), Ok(Some(0)));
-        assert_eq!(search_kmp(&data, &pattern), Ok(Some(0)));
+        assert!(matches!(search(&data, &pattern).unwrap(), Some(0)));
+        assert!(matches!(search_kmp(&data, &pattern).unwrap(), Some(0)));
     }
 
     #[test]
     fn test_single_element_pattern() {
         let data = vec![1, 2, 3, 4, 5];
         let pattern = vec![3];
-        assert_eq!(search(&data, &pattern), Ok(Some(2)));
-        assert_eq!(search_kmp(&data, &pattern), Ok(Some(2)));
+        assert!(matches!(search(&data, &pattern).unwrap(), Some(2)));
+        assert!(matches!(search_kmp(&data, &pattern).unwrap(), Some(2)));
     }
 
     #[test]
     fn test_pattern_equals_data() {
         let data = vec![1, 2, 3];
         let pattern = vec![1, 2, 3];
-        assert_eq!(search(&data, &pattern), Ok(Some(0)));
-        assert_eq!(search_kmp(&data, &pattern), Ok(Some(0)));
+        assert!(matches!(search(&data, &pattern).unwrap(), Some(0)));
+        assert!(matches!(search_kmp(&data, &pattern).unwrap(), Some(0)));
     }
 
     #[test]
     fn test_complex_pattern() {
         let data = vec![1, 2, 3, 1, 2, 4, 1, 2, 3, 1, 2, 3];
         let pattern = vec![1, 2, 3];
-        assert_eq!(search(&data, &pattern), Ok(Some(0)));
-        assert_eq!(search_kmp(&data, &pattern), Ok(Some(0)));
+        assert!(matches!(search(&data, &pattern).unwrap(), Some(0)));
+        assert!(matches!(search_kmp(&data, &pattern).unwrap(), Some(0)));
     }
 }

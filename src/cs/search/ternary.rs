@@ -1,4 +1,4 @@
-use crate::error::{Result, SearchError};
+use crate::cs::error::{Result, Error};
 
 /// Performs a ternary search on a sorted slice to find a target value.
 /// Divides the search interval into three parts and determines which part to search next.
@@ -10,15 +10,15 @@ use crate::error::{Result, SearchError};
 /// # Returns
 /// * `Ok(Some(index))` - The index where the target value was found
 /// * `Ok(None)` - The target value was not found
-/// * `Err(SearchError)` - An error occurred during the search (e.g., unsorted input)
+/// * `Err(Error)` - An error occurred during the search (e.g., unsorted input)
 ///
 /// # Examples
 /// ```
-/// use blocks_cs_search::algorithms::ternary;
-///
+/// # use Blocks::cs::search::ternary;
+/// #
 /// let numbers = vec![1, 2, 3, 4, 5, 6];
-/// assert_eq!(ternary::search(&numbers, &4), Ok(Some(3)));
-/// assert_eq!(ternary::search(&numbers, &7), Ok(None));
+/// assert!(matches!(ternary::search(&numbers, &4).unwrap(), Some(3)));
+/// assert!(matches!(ternary::search(&numbers, &7).unwrap(), None));
 /// ```
 ///
 /// # Performance
@@ -34,9 +34,7 @@ pub fn search<T: Ord>(data: &[T], target: &T) -> Result<Option<usize>> {
 
     // Verify the slice is sorted
     if !is_sorted(data) {
-        return Err(SearchError::InvalidInput(
-            "Ternary search requires sorted input".to_string(),
-        ));
+        return Err(Error::invalid_input("Ternary search requires sorted input"));
     }
 
     let mut left = 0;
@@ -92,55 +90,55 @@ mod tests {
     #[test]
     fn test_empty_slice() {
         let data: Vec<i32> = vec![];
-        assert_eq!(search(&data, &5), Ok(None));
+        assert!(matches!(search(&data, &5).unwrap(), None));
     }
 
     #[test]
     fn test_single_element_found() {
         let data = vec![5];
-        assert_eq!(search(&data, &5), Ok(Some(0)));
+        assert!(matches!(search(&data, &5).unwrap(), Some(0)));
     }
 
     #[test]
     fn test_single_element_not_found() {
         let data = vec![5];
-        assert_eq!(search(&data, &3), Ok(None));
+        assert!(matches!(search(&data, &3).unwrap(), None));
     }
 
     #[test]
     fn test_two_elements_found_first() {
         let data = vec![1, 2];
-        assert_eq!(search(&data, &1), Ok(Some(0)));
+        assert!(matches!(search(&data, &1).unwrap(), Some(0)));
     }
 
     #[test]
     fn test_two_elements_found_second() {
         let data = vec![1, 2];
-        assert_eq!(search(&data, &2), Ok(Some(1)));
+        assert!(matches!(search(&data, &2).unwrap(), Some(1)));
     }
 
     #[test]
     fn test_multiple_elements_found_first() {
         let data = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
-        assert_eq!(search(&data, &1), Ok(Some(0)));
+        assert!(matches!(search(&data, &1).unwrap(), Some(0)));
     }
 
     #[test]
     fn test_multiple_elements_found_last() {
         let data = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
-        assert_eq!(search(&data, &9), Ok(Some(8)));
+        assert!(matches!(search(&data, &9).unwrap(), Some(8)));
     }
 
     #[test]
     fn test_multiple_elements_found_middle() {
         let data = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
-        assert_eq!(search(&data, &5), Ok(Some(4)));
+        assert!(matches!(search(&data, &5).unwrap(), Some(4)));
     }
 
     #[test]
     fn test_multiple_elements_not_found() {
         let data = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
-        assert_eq!(search(&data, &10), Ok(None));
+        assert!(matches!(search(&data, &10).unwrap(), None));
     }
 
     #[test]
@@ -156,29 +154,29 @@ mod tests {
         let data = vec![3, 1, 4, 1, 5];
         assert!(matches!(
             search(&data, &4),
-            Err(SearchError::InvalidInput(_))
+            Err(Error::InvalidInput(_))
         ));
     }
 
     #[test]
     fn test_large_sorted_dataset() {
         let data: Vec<i32> = (0..10_000).collect();
-        assert_eq!(search(&data, &5000), Ok(Some(5000)));
-        assert_eq!(search(&data, &10_000), Ok(None));
+        assert!(matches!(search(&data, &5000).unwrap(), Some(5000)));
+        assert!(matches!(search(&data, &10_000).unwrap(), None));
     }
 
     #[test]
     fn test_with_strings() {
         let data = vec!["apple", "banana", "orange", "pear"];
-        assert_eq!(search(&data, &"orange"), Ok(Some(2)));
-        assert_eq!(search(&data, &"grape"), Ok(None));
+        assert!(matches!(search(&data, &"orange").unwrap(), Some(2)));
+        assert!(matches!(search(&data, &"grape").unwrap(), None));
     }
 
     #[test]
     fn test_boundary_values() {
         let data = vec![i32::MIN, -5, 0, 5, i32::MAX];
-        assert_eq!(search(&data, &i32::MIN), Ok(Some(0)));
-        assert_eq!(search(&data, &i32::MAX), Ok(Some(4)));
-        assert_eq!(search(&data, &0), Ok(Some(2)));
+        assert!(matches!(search(&data, &i32::MIN).unwrap(), Some(0)));
+        assert!(matches!(search(&data, &i32::MAX).unwrap(), Some(4)));
+        assert!(matches!(search(&data, &0).unwrap(), Some(2)));
     }
 }

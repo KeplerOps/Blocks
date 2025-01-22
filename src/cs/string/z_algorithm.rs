@@ -1,4 +1,4 @@
-use crate::error::{Result, StringError};
+use crate::cs::error::{Result, Error};
 
 /// Computes the Z-array for a given pattern.
 /// The Z-array stores the length of the longest substring starting at each position
@@ -55,12 +55,12 @@ fn compute_z_array(pattern: &[u8]) -> Vec<usize> {
 /// * `Result<Vec<usize>>` - A vector containing all starting positions where the pattern occurs in the text
 ///
 /// # Errors
-/// * `StringError::EmptyPattern` if the pattern is empty
-/// * `StringError::PatternTooLong` if pattern length exceeds text length
+/// * `Error::EmptyPattern` if the pattern is empty
+/// * `Error::PatternTooLong` if pattern length exceeds text length
 ///
 /// # Example
 /// ```
-/// use blocks_cs_string::algorithms::z_algorithm;
+/// use Blocks::cs::string::z_algorithm;
 ///
 /// let text = "AABAACAADAABAAABAA";
 /// let pattern = "AABA";
@@ -73,10 +73,10 @@ pub fn find_all(text: impl AsRef<[u8]>, pattern: impl AsRef<[u8]>) -> Result<Vec
 
     // Validate inputs
     if pattern.is_empty() {
-        return Err(StringError::empty_pattern());
+        return Err(Error::empty_pattern());
     }
     if pattern.len() > text.len() {
-        return Err(StringError::pattern_too_long(pattern.len(), text.len()));
+        return Err(Error::pattern_too_long(pattern.len(), text.len()));
     }
 
     let m = pattern.len();
@@ -117,12 +117,12 @@ pub fn find_all(text: impl AsRef<[u8]>, pattern: impl AsRef<[u8]>) -> Result<Vec
 /// * `Result<Option<usize>>` - The starting position of the first occurrence if found, None otherwise
 ///
 /// # Errors
-/// * `StringError::EmptyPattern` if the pattern is empty
-/// * `StringError::PatternTooLong` if pattern length exceeds text length
+/// * `Error::EmptyPattern` if the pattern is empty
+/// * `Error::PatternTooLong` if pattern length exceeds text length
 ///
 /// # Example
 /// ```
-/// use blocks_cs_string::algorithms::z_algorithm;
+/// use Blocks::cs::string::z_algorithm;
 ///
 /// let text = "AABAACAADAABAAABAA";
 /// let pattern = "AABA";
@@ -135,10 +135,10 @@ pub fn find_first(text: impl AsRef<[u8]>, pattern: impl AsRef<[u8]>) -> Result<O
 
     // Validate inputs
     if pattern.is_empty() {
-        return Err(StringError::empty_pattern());
+        return Err(Error::empty_pattern());
     }
     if pattern.len() > text.len() {
-        return Err(StringError::pattern_too_long(pattern.len(), text.len()));
+        return Err(Error::pattern_too_long(pattern.len(), text.len()));
     }
 
     let m = pattern.len();
@@ -178,7 +178,7 @@ mod tests {
         let pattern = "";
         assert!(matches!(
             find_all(text, pattern),
-            Err(StringError::EmptyPattern)
+            Err(Error::EmptyPattern)
         ));
     }
 
@@ -188,7 +188,7 @@ mod tests {
         let pattern = "hello";
         assert!(matches!(
             find_all(text, pattern),
-            Err(StringError::PatternTooLong { .. })
+            Err(Error::PatternTooLong { .. })
         ));
     }
 
@@ -254,7 +254,7 @@ mod tests {
         let pattern = "a";
         assert!(matches!(
             find_all(text, pattern),
-            Err(StringError::PatternTooLong { .. })
+            Err(Error::PatternTooLong { .. })
         ));
     }
 

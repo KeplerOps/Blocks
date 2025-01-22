@@ -1,4 +1,4 @@
-use crate::error::{Result, SearchError};
+use crate::cs::error::{Result, Error};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::hash::Hash;
 
@@ -41,19 +41,19 @@ where
     /// # Returns
     /// * `Ok(Some(path))` - A vector representing the shortest path from start to target
     /// * `Ok(None)` - Target vertex not found
-    /// * `Err(SearchError)` - An error occurred during the search
+    /// * `Err(Error)` - An error occurred during the search
     ///
     /// # Examples
     /// ```
-    /// use blocks_cs_search::algorithms::bfs::Graph;
-    ///
+    /// # use Blocks::cs::search::bfs::Graph;
+    /// #
     /// let mut graph = Graph::new();
     /// graph.add_edge(1, 2);
     /// graph.add_edge(2, 3);
     /// graph.add_edge(1, 4);
     ///
-    /// assert_eq!(graph.search(&1, &3), Ok(Some(vec![1, 2, 3])));
-    /// assert_eq!(graph.search(&1, &5), Ok(None));
+    /// assert!(matches!(graph.search(&1, &3).unwrap(), Some(path) if path == vec![1, 2, 3]));
+    /// assert!(matches!(graph.search(&1, &5).unwrap(), None));
     /// ```
     ///
     /// # Performance
@@ -61,9 +61,7 @@ where
     /// * Space: O(V) for the queue and visited set
     pub fn search(&self, start: &T, target: &T) -> Result<Option<Vec<T>>> {
         if !self.edges.contains_key(start) {
-            return Err(SearchError::InvalidInput(
-                "Start vertex not found in graph".to_string(),
-            ));
+            return Err(Error::invalid_input("Start vertex not found in graph"));
         }
 
         // If start is the target, return immediately
@@ -120,12 +118,10 @@ where
     ///
     /// # Returns
     /// * `Ok(vertices)` - A vector of vertices in BFS order
-    /// * `Err(SearchError)` - An error occurred during the traversal
+    /// * `Err(Error)` - An error occurred during the traversal
     pub fn traverse(&self, start: &T) -> Result<Vec<T>> {
         if !self.edges.contains_key(start) {
-            return Err(SearchError::InvalidInput(
-                "Start vertex not found in graph".to_string(),
-            ));
+            return Err(Error::invalid_input("Start vertex not found in graph"));
         }
 
         let mut result = Vec::new();
@@ -161,7 +157,7 @@ mod tests {
         let graph: Graph<i32> = Graph::new();
         assert!(matches!(
             graph.search(&1, &2),
-            Err(SearchError::InvalidInput(_))
+            Err(Error::InvalidInput(_))
         ));
     }
 
@@ -169,14 +165,14 @@ mod tests {
     fn test_single_vertex() {
         let mut graph = Graph::new();
         graph.add_vertex(1);
-        assert_eq!(graph.search(&1, &1), Ok(Some(vec![1])));
+        assert!(matches!(graph.search(&1, &1).unwrap(), Some(path) if path == vec![1]));
     }
 
     #[test]
     fn test_direct_edge() {
         let mut graph = Graph::new();
         graph.add_edge(1, 2);
-        assert_eq!(graph.search(&1, &2), Ok(Some(vec![1, 2])));
+        assert!(matches!(graph.search(&1, &2).unwrap(), Some(path) if path == vec![1, 2]));
     }
 
     #[test]
@@ -184,7 +180,7 @@ mod tests {
         let mut graph = Graph::new();
         graph.add_edge(1, 2);
         graph.add_edge(2, 3);
-        assert_eq!(graph.search(&1, &4), Ok(None));
+        assert!(matches!(graph.search(&1, &4).unwrap(), None));
     }
 
     #[test]
@@ -198,7 +194,7 @@ mod tests {
         graph.add_edge(1, 5);
         graph.add_edge(5, 4);
 
-        assert_eq!(graph.search(&1, &4), Ok(Some(vec![1, 5, 4])));
+        assert!(matches!(graph.search(&1, &4).unwrap(), Some(path) if path == vec![1, 5, 4]));
     }
 
     #[test]
@@ -209,7 +205,7 @@ mod tests {
         graph.add_edge(3, 1);
         graph.add_edge(2, 4);
 
-        assert_eq!(graph.search(&1, &4), Ok(Some(vec![1, 2, 4])));
+        assert!(matches!(graph.search(&1, &4).unwrap(), Some(path) if path == vec![1, 2, 4]));
     }
 
     #[test]
@@ -219,10 +215,7 @@ mod tests {
         graph.add_edge("B", "C");
         graph.add_edge("A", "D");
 
-        assert_eq!(
-            graph.search(&"A", &"C"),
-            Ok(Some(vec!["A", "B", "C"]))
-        );
+        assert!(matches!(graph.search(&"A", &"C").unwrap(), Some(path) if path == vec!["A", "B", "C"]));
     }
 
     #[test]
@@ -231,7 +224,7 @@ mod tests {
         graph.add_edge(1, 2);
         graph.add_edge(3, 4);
 
-        assert_eq!(graph.search(&1, &4), Ok(None));
+        assert!(matches!(graph.search(&1, &4).unwrap(), None));
     }
 
     #[test]
@@ -241,7 +234,7 @@ mod tests {
 
         assert!(matches!(
             graph.search(&3, &2),
-            Err(SearchError::InvalidInput(_))
+            Err(Error::InvalidInput(_))
         ));
     }
 

@@ -25,7 +25,7 @@ use crate::error::{Result, SortError};
 /// # Examples
 /// 
 /// ```
-/// use blocks_cs_sort::algorithms::mergesort::MergeSortBuilder;
+/// use Blocks::cs::sort::mergesort::MergeSortBuilder;
 /// 
 /// let mut arr = vec![3, 1, 4, 1, 5, 9];
 /// MergeSortBuilder::new()
@@ -83,7 +83,7 @@ impl MergeSortBuilder {
     /// 
     /// # Examples
     /// ```
-    /// use blocks_cs_sort::algorithms::mergesort::MergeSortBuilder;
+    /// use Blocks::cs::sort::mergesort::MergeSortBuilder;
     /// 
     /// let mut arr = vec![5, 2, 8, 1, 9, 3];
     /// MergeSortBuilder::new()
@@ -112,7 +112,7 @@ impl MergeSortBuilder {
     /// 
     /// # Examples
     /// ```
-    /// use blocks_cs_sort::algorithms::mergesort::MergeSortBuilder;
+    /// use Blocks::cs::sort::mergesort::MergeSortBuilder;
     /// 
     /// let mut arr = vec![5, 2, 8, 1, 9, 3];
     /// MergeSortBuilder::new()

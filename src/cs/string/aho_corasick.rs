@@ -1,3 +1,4 @@
+use crate::cs::error::{Error, Result};
 use std::collections::{HashMap, VecDeque};
 use std::fmt;
 use std::sync::Arc;
@@ -89,18 +90,18 @@ pub struct AhoCorasick {
 
 impl AhoCorasick {
     /// Creates a new Aho-Corasick automaton from the given patterns with default configuration.
-    pub fn new(patterns: Vec<String>) -> Result<Self, String> {
+    pub fn new(patterns: Vec<String>) -> Result<Self> {
         Self::with_config(patterns, MatchConfig::default())
     }
 
     /// Creates a new Aho-Corasick automaton with the specified configuration.
-    pub fn with_config(patterns: Vec<String>, config: MatchConfig) -> Result<Self, String> {
+    pub fn with_config(patterns: Vec<String>, config: MatchConfig) -> Result<Self> {
         // Validate patterns.
         if patterns.is_empty() {
-            return Err("At least one pattern is required".to_string());
+            return Err(Error::invalid_input("At least one pattern is required"));
         }
         if patterns.iter().any(|p| p.is_empty()) {
-            return Err("Empty patterns are not allowed".to_string());
+            return Err(Error::empty_pattern());
         }
 
         let mut ac = Self {
@@ -117,7 +118,7 @@ impl AhoCorasick {
     }
 
     /// Builds the initial trie structure from the patterns.
-    fn build_trie(&mut self) -> Result<(), String> {
+    fn build_trie(&mut self) -> Result<()> {
         for (pattern_idx, pattern) in self.patterns.iter().enumerate() {
             let mut current = self.root;
 

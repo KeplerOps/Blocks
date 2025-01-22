@@ -52,3 +52,7 @@ panic = 'abort'
 [profile.dev]
 opt-level = 0
 debug = true
+
+[features]
+parallel = []
+simd = []

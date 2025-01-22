@@ -1,4 +1,4 @@
-use crate::error::{Result, StringError};
+use crate::cs::error::{Error, Result};
 use std::collections::HashMap;
 
 fn build_bad_char_table(pattern: &[u8]) -> HashMap<u8, usize> {
@@ -52,10 +52,10 @@ pub fn find_all(text: impl AsRef<[u8]>, pattern: impl AsRef<[u8]>) -> Result<Vec
     let pattern = pattern.as_ref();
 
     if pattern.is_empty() {
-        return Err(StringError::empty_pattern());
+        return Err(Error::empty_pattern());
     }
     if pattern.len() > text.len() {
-        return Err(StringError::pattern_too_long(pattern.len(), text.len()));
+        return Err(Error::pattern_too_long(pattern.len(), text.len()));
     }
 
     let m = pattern.len();
@@ -108,10 +108,10 @@ pub fn find_first(text: impl AsRef<[u8]>, pattern: impl AsRef<[u8]>) -> Result<O
     let pattern = pattern.as_ref();
 
     if pattern.is_empty() {
-        return Err(StringError::empty_pattern());
+        return Err(Error::empty_pattern());
     }
     if pattern.len() > text.len() {
-        return Err(StringError::pattern_too_long(pattern.len(), text.len()));
+        return Err(Error::pattern_too_long(pattern.len(), text.len()));
     }
 
     let m = pattern.len();
@@ -163,7 +163,7 @@ mod tests {
         let pattern = "";
         assert!(matches!(
             find_all(text, pattern),
-            Err(StringError::EmptyPattern)
+            Err(Error::EmptyPattern)
         ));
     }
 
@@ -173,7 +173,7 @@ mod tests {
         let pattern = "hello";
         assert!(matches!(
             find_all(text, pattern),
-            Err(StringError::PatternTooLong { .. })
+            Err(Error::PatternTooLong { .. })
         ));
     }
 
@@ -239,7 +239,7 @@ mod tests {
         let pattern = "a";
         assert!(matches!(
             find_all(text, pattern),
-            Err(StringError::PatternTooLong { .. })
+            Err(Error::PatternTooLong { .. })
         ));
     }
 
