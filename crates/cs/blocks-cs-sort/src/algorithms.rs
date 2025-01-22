@@ -1,4 +1,3 @@
-
 /*!
 This module provides a collection of sorting algorithms with different performance characteristics
 and trade-offs. Each algorithm is implemented with a focus on performance, safety, and usability.
@@ -33,7 +32,7 @@ A divide-and-conquer algorithm that guarantees stability and consistent performa
 
 # Examples
 ```rust
-use blocks_cs_sort::algorithms::{quicksort, heapsort};
+use blocks_cs_sort::algorithms::{quicksort, heapsort, mergesort};
 
 // Using QuickSort
 let mut numbers = vec![3, 1, 4, 1, 5, 9];
@@ -66,46 +65,39 @@ assert_eq!(numbers, vec![1, 1, 3, 4, 5, 9]);
 ```
 */
 
-pub mod quicksort;
-pub mod heapsort;
-pub mod mergesort;
+/// Sorting algorithms module.
+///
+/// This module provides various sorting algorithms with different performance characteristics.
+/// Each algorithm is implemented as a separate module with its own tests and documentation.
+///
+/// # Examples
+///
+/// ```
+/// use blocks_cs_sort::algorithms::mergesort;
+///
+/// let mut numbers = vec![3, 1, 4, 1, 5, 9, 2, 6, 5, 3];
+/// mergesort::sort(&mut numbers).expect("Sort should succeed");
+/// assert_eq!(numbers, vec![1, 1, 2, 3, 3, 4, 5, 5, 6, 9]);
+/// ```
 pub mod bubblesort;
+pub mod bucketsort;
+pub mod countingsort;
+pub mod heapsort;
 pub mod insertionsort;
+pub mod mergesort;
+pub mod quicksort;
+pub mod radixsort;
 pub mod selectionsort;
 pub mod shellsort;
-pub mod countingsort;
-pub mod radixsort;
-pub mod bucketsort;
 
-/// Re-export of [`quicksort::sort`].
-/// 
-/// Provides an efficient, in-place quicksort implementation with O(n log n) average-case complexity.
-/// This implementation uses median-of-three pivot selection and switches to insertion sort for small arrays.
-pub use self::quicksort::sort as quicksort;
-
-/// Re-export of [`heapsort::sort`].
-/// 
-/// Provides a heap-based sorting implementation with guaranteed O(n log n) complexity and O(1) space usage.
-/// This implementation supports parallel sorting for large arrays when the `parallel` feature is enabled.
-pub use self::heapsort::sort as heapsort;
-
-/// Re-export of [`mergesort::sort`].
-/// 
-/// Provides a stable sorting implementation with guaranteed O(n log n) complexity.
-/// This implementation uses O(n) auxiliary space to achieve stability.
-pub use self::mergesort::sort as mergesort;
-
-// TODO
+// Re-export sort functions for convenience
 pub use self::bubblesort::sort as bubblesort;
-
-pub use self::insertionsort::sort as insertionsort;
-
-pub use self::selectionsort::sort as selectionsort;
-
-pub use self::shellsort::sort as shellsort;
-
-pub use self::countingsort::sort as countingsort;
-
-pub use self::radixsort::sort as radixsort;
-
 pub use self::bucketsort::sort as bucketsort;
+pub use self::countingsort::sort as countingsort;
+pub use self::heapsort::sort as heapsort;
+pub use self::insertionsort::sort as insertionsort;
+pub use self::mergesort::sort as mergesort;
+pub use self::quicksort::sort as quicksort;
+pub use self::radixsort::sort as radixsort;
+pub use self::selectionsort::sort as selectionsort;
+pub use self::shellsort::sort as shellsort;

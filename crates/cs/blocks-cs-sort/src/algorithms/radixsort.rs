@@ -1,5 +1,3 @@
-use std::fmt::Debug;
-
 /// Radix Sort implementation for sorting slices of unsigned integers.
 /// 
 /// # Algorithm Overview
@@ -163,7 +161,7 @@ mod tests {
             original_index: usize,
         }
 
-        let mut pairs = vec![
+        let pairs = vec![
             Pair { key: 501, original_index: 0 },
             Pair { key: 501, original_index: 1 },
             Pair { key: 502, original_index: 2 },

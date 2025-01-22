@@ -1,4 +1,4 @@
-use crate::error::{Result, SearchError};
+use crate::error::Result;
 use rayon::prelude::*;
 
 /// Threshold for switching to parallel search

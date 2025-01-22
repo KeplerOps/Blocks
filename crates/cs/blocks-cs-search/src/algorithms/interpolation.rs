@@ -1,5 +1,5 @@
 use crate::error::{Result, SearchError};
-use num_traits::{NumCast, ToPrimitive};
+use num_traits::ToPrimitive;
 use std::cmp::Ord;
 
 /// Performs an interpolation search on a sorted slice to find a target value.
