@@ -1,25 +1,25 @@
 use std::fmt::Debug;
 
 /// Shell Sort implementation for sorting slices.
-/// 
+///
 /// # Algorithm Overview
 /// Shell sort is an optimization of insertion sort that:
 /// 1. Starts by sorting pairs of elements far apart from each other
 /// 2. Progressively reduces the gap between elements being compared
 /// 3. Uses the gap sequence: n/2, n/4, n/8, ..., 1 (other sequences possible)
 /// 4. For each gap, performs a gapped insertion sort
-/// 
+///
 /// # Time Complexity
 /// - Best Case: O(n log n) - depends on gap sequence
 /// - Average Case: O(n^1.3) - using Knuth's sequence
 /// - Worst Case: O(n²) or O(n log² n) depending on gap sequence
-/// 
+///
 /// # Space Complexity
 /// - O(1) auxiliary space
-/// 
+///
 /// # Stability
 /// - Not stable
-/// 
+///
 /// # Advantages
 /// - Simple implementation
 /// - Adaptive: runs faster when array is partially sorted
@@ -37,12 +37,14 @@ where
 
     // Start with the largest gap and work down to a gap of 1
     let mut gap = calculate_initial_gap(len);
-    
+
     while gap > 0 {
         // Do a gapped insertion sort for this gap size
         for i in gap..len {
             let mut j = i;
-            while j >= gap && slice[j - gap].partial_cmp(&slice[j]).unwrap() == std::cmp::Ordering::Greater {
+            while j >= gap
+                && slice[j - gap].partial_cmp(&slice[j]).unwrap() == std::cmp::Ordering::Greater
+            {
                 slice.swap(j - gap, j);
                 j -= gap;
             }
@@ -197,18 +199,21 @@ mod tests {
         let n = 100;
         let mut gap = 1;
         let mut gaps = vec![gap];
-        
+
         while gap * 3 + 1 < n {
             gap = gap * 3 + 1;
             gaps.push(gap);
         }
-        
+
         // Check that gaps are decreasing
-        for i in 0..gaps.len()-1 {
-            assert!(gaps[i] < gaps[i+1], "Gaps should be in increasing order");
+        for i in 0..gaps.len() - 1 {
+            assert!(gaps[i] < gaps[i + 1], "Gaps should be in increasing order");
         }
-        
+
         // Check that the largest gap is less than n
-        assert!(gaps.last().unwrap() < &n, "Largest gap should be less than array size");
+        assert!(
+            gaps.last().unwrap() < &n,
+            "Largest gap should be less than array size"
+        );
     }
 }

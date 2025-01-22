@@ -1,24 +1,24 @@
 use std::fmt::Debug;
 
 /// Insertion Sort implementation for sorting slices.
-/// 
+///
 /// # Algorithm Overview
 /// Insertion sort builds the final sorted array one item at a time by:
 /// 1. Starting with the first element as a sorted array of length 1
 /// 2. Taking each subsequent element and inserting it into its correct position in the sorted portion
 /// 3. Shifting elements as needed to make space for the inserted element
-/// 
+///
 /// # Time Complexity
 /// - Best Case: O(n) when array is already sorted
 /// - Average Case: O(n²)
 /// - Worst Case: O(n²) when array is reverse sorted
-/// 
+///
 /// # Space Complexity
 /// - O(1) auxiliary space
-/// 
+///
 /// # Stability
 /// - Stable sort algorithm
-/// 
+///
 /// # Advantages
 /// - Simple implementation
 /// - Efficient for small data sets
@@ -118,10 +118,22 @@ mod tests {
         }
 
         let mut items = vec![
-            Item { key: 1, original_index: 0 },
-            Item { key: 1, original_index: 1 },
-            Item { key: 2, original_index: 2 },
-            Item { key: 2, original_index: 3 },
+            Item {
+                key: 1,
+                original_index: 0,
+            },
+            Item {
+                key: 1,
+                original_index: 1,
+            },
+            Item {
+                key: 2,
+                original_index: 2,
+            },
+            Item {
+                key: 2,
+                original_index: 3,
+            },
         ];
 
         sort(&mut items);

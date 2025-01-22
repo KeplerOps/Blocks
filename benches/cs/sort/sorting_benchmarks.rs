@@ -27,30 +27,22 @@ fn bench_mergesort(c: &mut Criterion) {
     // Test different array sizes
     for size in [100, 1000, 10000, 100000].iter() {
         // Random arrays
-        group.bench_with_input(
-            BenchmarkId::new("random", size), 
-            size,
-            |b, &size| {
-                b.iter_batched(
-                    || generate_random_array(size),
-                    |mut arr| MergeSortBuilder::new().sort(&mut arr),
-                    criterion::BatchSize::LargeInput,
-                )
-            }
-        );
+        group.bench_with_input(BenchmarkId::new("random", size), size, |b, &size| {
+            b.iter_batched(
+                || generate_random_array(size),
+                |mut arr| MergeSortBuilder::new().sort(&mut arr),
+                criterion::BatchSize::LargeInput,
+            )
+        });
 
         // Nearly sorted arrays
-        group.bench_with_input(
-            BenchmarkId::new("nearly_sorted", size),
-            size,
-            |b, &size| {
-                b.iter_batched(
-                    || generate_nearly_sorted_array(size),
-                    |mut arr| MergeSortBuilder::new().sort(&mut arr),
-                    criterion::BatchSize::LargeInput,
-                )
-            }
-        );
+        group.bench_with_input(BenchmarkId::new("nearly_sorted", size), size, |b, &size| {
+            b.iter_batched(
+                || generate_nearly_sorted_array(size),
+                |mut arr| MergeSortBuilder::new().sort(&mut arr),
+                criterion::BatchSize::LargeInput,
+            )
+        });
 
         // Parallel sorting for large arrays
         if *size >= 10000 {
@@ -63,7 +55,7 @@ fn bench_mergesort(c: &mut Criterion) {
                         |mut arr| MergeSortBuilder::new().parallel(true).sort(&mut arr),
                         criterion::BatchSize::LargeInput,
                     )
-                }
+                },
             );
         }
     }
@@ -82,12 +74,14 @@ fn bench_insertion_threshold(c: &mut Criterion) {
             |b, &threshold| {
                 b.iter_batched(
                     || generate_random_array(size),
-                    |mut arr| MergeSortBuilder::new()
-                        .insertion_threshold(threshold)
-                        .sort(&mut arr),
+                    |mut arr| {
+                        MergeSortBuilder::new()
+                            .insertion_threshold(threshold)
+                            .sort(&mut arr)
+                    },
                     criterion::BatchSize::LargeInput,
                 )
-            }
+            },
         );
     }
 

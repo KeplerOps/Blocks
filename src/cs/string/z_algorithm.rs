@@ -1,4 +1,4 @@
-use crate::cs::error::{Result, Error};
+use crate::cs::error::{Error, Result};
 
 /// Computes the Z-array for a given pattern.
 /// The Z-array stores the length of the longest substring starting at each position
@@ -98,8 +98,13 @@ pub fn find_all(text: impl AsRef<[u8]>, pattern: impl AsRef<[u8]>) -> Result<Vec
     let z = compute_z_array(&combined);
 
     // Find matches by looking for Z-values equal to pattern length
-    for i in m + 1..combined.len() {
-        if z[i] == m {
+    for (i, &item) in z
+        .iter()
+        .enumerate()
+        .skip(m + 1)
+        .take(combined.len() - m - 1)
+    {
+        if item == m {
             matches.push(i - (m + 1));
         }
     }
@@ -159,8 +164,13 @@ pub fn find_first(text: impl AsRef<[u8]>, pattern: impl AsRef<[u8]>) -> Result<O
     let z = compute_z_array(&combined);
 
     // Find first match by looking for Z-value equal to pattern length
-    for i in m + 1..combined.len() {
-        if z[i] == m {
+    for (i, &item) in z
+        .iter()
+        .enumerate()
+        .skip(m + 1)
+        .take(combined.len() - m - 1)
+    {
+        if item == m {
             return Ok(Some(i - (m + 1)));
         }
     }
@@ -176,10 +186,7 @@ mod tests {
     fn test_empty_pattern() {
         let text = "hello";
         let pattern = "";
-        assert!(matches!(
-            find_all(text, pattern),
-            Err(Error::EmptyPattern)
-        ));
+        assert!(matches!(find_all(text, pattern), Err(Error::EmptyPattern)));
     }
 
     #[test]
@@ -244,8 +251,14 @@ mod tests {
     fn test_unicode_text() {
         let text = "Hello 世界!";
         let pattern = "世界";
-        assert_eq!(find_all(text.as_bytes(), pattern.as_bytes()).unwrap(), vec![6]);
-        assert_eq!(find_first(text.as_bytes(), pattern.as_bytes()).unwrap(), Some(6));
+        assert_eq!(
+            find_all(text.as_bytes(), pattern.as_bytes()).unwrap(),
+            vec![6]
+        );
+        assert_eq!(
+            find_first(text.as_bytes(), pattern.as_bytes()).unwrap(),
+            Some(6)
+        );
     }
 
     #[test]

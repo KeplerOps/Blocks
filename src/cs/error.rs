@@ -11,17 +11,11 @@ pub enum Error {
 
     /// The pattern is longer than the text
     #[error("Pattern length {pattern_len} is longer than text length {text_len}")]
-    PatternTooLong {
-        pattern_len: usize,
-        text_len: usize,
-    },
+    PatternTooLong { pattern_len: usize, text_len: usize },
 
     /// The recursion depth exceeded the maximum
     #[error("Recursion depth {depth} exceeded maximum allowed depth of {max_depth}")]
-    RecursionLimitExceeded {
-        depth: usize,
-        max_depth: usize,
-    },
+    RecursionLimitExceeded { depth: usize, max_depth: usize },
 
     /// Failed to allocate memory
     #[error("Failed to allocate memory: {reason}")]
@@ -33,16 +27,11 @@ pub enum Error {
 
     /// A parallel execution task failed
     #[error("Parallel execution failed: {reason}")]
-    ParallelExecutionFailed {
-        reason: String,
-    },
+    ParallelExecutionFailed { reason: String },
 
     /// The input was too large
     #[error("Input length {length} exceeds maximum supported length of {max_length}")]
-    InputTooLarge {
-        length: usize,
-        max_length: usize,
-    },
+    InputTooLarge { length: usize, max_length: usize },
 
     /// Index out of bounds
     #[error("Index out of bounds: {0}")]
@@ -81,10 +70,7 @@ impl Error {
     }
 
     pub(crate) fn input_too_large(length: usize, max_length: usize) -> Self {
-        Self::InputTooLarge {
-            length,
-            max_length,
-        }
+        Self::InputTooLarge { length, max_length }
     }
 
     pub(crate) fn invalid_input(msg: impl Display) -> Self {
@@ -102,13 +88,22 @@ mod tests {
         assert_eq!(err.to_string(), "Pattern cannot be empty");
 
         let err = Error::pattern_too_long(10, 5);
-        assert_eq!(err.to_string(), "Pattern length 10 is longer than text length 5");
+        assert_eq!(
+            err.to_string(),
+            "Pattern length 10 is longer than text length 5"
+        );
 
         let err = Error::recursion_limit_exceeded(100, 50);
-        assert_eq!(err.to_string(), "Recursion depth 100 exceeded maximum allowed depth of 50");
+        assert_eq!(
+            err.to_string(),
+            "Recursion depth 100 exceeded maximum allowed depth of 50"
+        );
 
         let err = Error::input_too_large(1_000_000, 100_000);
-        assert_eq!(err.to_string(), "Input length 1000000 exceeds maximum supported length of 100000");
+        assert_eq!(
+            err.to_string(),
+            "Input length 1000000 exceeds maximum supported length of 100000"
+        );
 
         let err = Error::invalid_input("invalid UTF-8");
         assert_eq!(err.to_string(), "Invalid input: invalid UTF-8");

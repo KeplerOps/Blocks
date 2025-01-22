@@ -31,6 +31,8 @@ impl fmt::Debug for MatchConfig {
     }
 }
 
+// Manual implementation needed because Arc<dyn Fn> doesn't implement Default
+#[allow(clippy::derivable_impls)]
 impl Default for MatchConfig {
     fn default() -> Self {
         Self {
@@ -130,7 +132,8 @@ impl AhoCorasick {
                     current = next;
                 } else {
                     let new_idx = self.nodes.len();
-                    self.nodes.push(TrieNode::new(self.nodes[current].depth + 1));
+                    self.nodes
+                        .push(TrieNode::new(self.nodes[current].depth + 1));
                     self.nodes[current].children.insert(ch, new_idx);
                     current = new_idx;
                 }
@@ -195,7 +198,11 @@ impl AhoCorasick {
         while !self.nodes[current].children.contains_key(&ch) && current != self.root {
             current = self.nodes[current].failure.unwrap_or(self.root);
         }
-        self.nodes[current].children.get(&ch).copied().unwrap_or(self.root)
+        self.nodes[current]
+            .children
+            .get(&ch)
+            .copied()
+            .unwrap_or(self.root)
     }
 
     /// Helper function to check if a match is at a word boundary.
@@ -210,7 +217,10 @@ impl AhoCorasick {
         let is_boundary_char = |c: char| check_fn(c);
 
         let before_is_boundary = start == 0
-            || text[..start].chars().next_back().map_or(true, is_boundary_char);
+            || text[..start]
+                .chars()
+                .next_back()
+                .map_or(true, is_boundary_char);
         let after_is_boundary =
             end >= text.len() || text[end..].chars().next().map_or(true, is_boundary_char);
 
@@ -265,7 +275,8 @@ impl AhoCorasick {
             for pos_matches in matches_at_pos.into_iter().filter(|v| !v.is_empty()) {
                 // Sort by (longest match first, then pattern index).
                 let mut pos_matches = pos_matches;
-                pos_matches.sort_by_key(|m| (-(m.end as isize - m.start as isize), m.pattern_index));
+                pos_matches
+                    .sort_by_key(|m| (-(m.end as isize - m.start as isize), m.pattern_index));
                 matches.push(pos_matches[0].clone());
             }
         }

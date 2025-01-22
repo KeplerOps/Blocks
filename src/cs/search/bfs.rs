@@ -1,4 +1,4 @@
-use crate::cs::error::{Result, Error};
+use crate::cs::error::{Error, Result};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::hash::Hash;
 
@@ -7,6 +7,15 @@ use std::hash::Hash;
 pub struct Graph<T> {
     /// Adjacency list representation of the graph
     edges: HashMap<T, Vec<T>>,
+}
+
+impl<T> Default for Graph<T>
+where
+    T: Eq + Hash + Clone,
+{
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl<T> Graph<T>
@@ -22,12 +31,15 @@ where
 
     /// Adds a vertex to the graph
     pub fn add_vertex(&mut self, vertex: T) {
-        self.edges.entry(vertex).or_insert_with(Vec::new);
+        self.edges.entry(vertex).or_default();
     }
 
     /// Adds a directed edge from source to destination
     pub fn add_edge(&mut self, source: T, destination: T) {
-        self.edges.entry(source.clone()).or_default().push(destination.clone());
+        self.edges
+            .entry(source.clone())
+            .or_default()
+            .push(destination.clone());
         // Ensure the destination vertex exists in the graph
         self.edges.entry(destination).or_default();
     }
@@ -155,10 +167,7 @@ mod tests {
     #[test]
     fn test_empty_graph() {
         let graph: Graph<i32> = Graph::new();
-        assert!(matches!(
-            graph.search(&1, &2),
-            Err(Error::InvalidInput(_))
-        ));
+        assert!(matches!(graph.search(&1, &2), Err(Error::InvalidInput(_))));
     }
 
     #[test]
@@ -215,7 +224,9 @@ mod tests {
         graph.add_edge("B", "C");
         graph.add_edge("A", "D");
 
-        assert!(matches!(graph.search(&"A", &"C").unwrap(), Some(path) if path == vec!["A", "B", "C"]));
+        assert!(
+            matches!(graph.search(&"A", &"C").unwrap(), Some(path) if path == vec!["A", "B", "C"])
+        );
     }
 
     #[test]
@@ -232,10 +243,7 @@ mod tests {
         let mut graph = Graph::new();
         graph.add_edge(1, 2);
 
-        assert!(matches!(
-            graph.search(&3, &2),
-            Err(Error::InvalidInput(_))
-        ));
+        assert!(matches!(graph.search(&3, &2), Err(Error::InvalidInput(_))));
     }
 
     #[test]

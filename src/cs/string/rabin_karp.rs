@@ -1,4 +1,4 @@
-use crate::cs::error::{Result, Error};
+use crate::cs::error::{Error, Result};
 
 const PRIME: u64 = 16777619; // FNV prime
 const BASE: u64 = 256; // Number of possible characters
@@ -21,8 +21,8 @@ fn compute_pattern_hash(pattern: &[u8], m: usize) -> (u64, u64) {
     }
 
     // Calculate hash value of pattern
-    for i in 0..m {
-        pattern_hash = (pattern_hash * BASE + pattern[i] as u64) % PRIME;
+    for &ch in pattern.iter().take(m) {
+        pattern_hash = (pattern_hash * BASE + ch as u64) % PRIME;
     }
 
     (pattern_hash, h)
@@ -75,8 +75,8 @@ pub fn find_all(text: impl AsRef<[u8]>, pattern: impl AsRef<[u8]>) -> Result<Vec
     let mut text_hash = 0;
 
     // Calculate hash value of first window
-    for i in 0..m {
-        text_hash = (text_hash * BASE + text[i] as u64) % PRIME;
+    for &ch in text.iter().take(m) {
+        text_hash = (text_hash * BASE + ch as u64) % PRIME;
     }
 
     // Slide pattern over text one by one
@@ -145,8 +145,8 @@ pub fn find_first(text: impl AsRef<[u8]>, pattern: impl AsRef<[u8]>) -> Result<O
     let mut text_hash = 0;
 
     // Calculate hash value of first window
-    for i in 0..m {
-        text_hash = (text_hash * BASE + text[i] as u64) % PRIME;
+    for &ch in text.iter().take(m) {
+        text_hash = (text_hash * BASE + ch as u64) % PRIME;
     }
 
     // Slide pattern over text one by one
@@ -177,10 +177,7 @@ mod tests {
     fn test_empty_pattern() {
         let text = "hello";
         let pattern = "";
-        assert!(matches!(
-            find_all(text, pattern),
-            Err(Error::EmptyPattern)
-        ));
+        assert!(matches!(find_all(text, pattern), Err(Error::EmptyPattern)));
     }
 
     #[test]
@@ -245,8 +242,14 @@ mod tests {
     fn test_unicode_text() {
         let text = "Hello 世界!";
         let pattern = "世界";
-        assert_eq!(find_all(text.as_bytes(), pattern.as_bytes()).unwrap(), vec![6]);
-        assert_eq!(find_first(text.as_bytes(), pattern.as_bytes()).unwrap(), Some(6));
+        assert_eq!(
+            find_all(text.as_bytes(), pattern.as_bytes()).unwrap(),
+            vec![6]
+        );
+        assert_eq!(
+            find_first(text.as_bytes(), pattern.as_bytes()).unwrap(),
+            Some(6)
+        );
     }
 
     #[test]

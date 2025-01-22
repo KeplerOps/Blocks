@@ -160,7 +160,8 @@ impl SuffixAutomaton {
         }
 
         // Only collect positions from the final state we reached
-        let mut result: Vec<_> = self.states[s].end_pos
+        let mut result: Vec<_> = self.states[s]
+            .end_pos
             .iter()
             .filter_map(|&ep| {
                 let pat_len = pattern.chars().count();

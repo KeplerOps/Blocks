@@ -1,21 +1,21 @@
 use std::fmt::Debug;
 
 /// Bubblesort implementation for sorting slices.
-/// 
+///
 /// # Algorithm Overview
 /// Bubblesort is a simple sorting algorithm that:
 /// 1. Repeatedly steps through the list
 /// 2. Compares adjacent elements and swaps them if they are in the wrong order
 /// 3. Continues until no swaps are needed
-/// 
+///
 /// # Time Complexity
 /// - Best Case: O(n) when array is already sorted
 /// - Average Case: O(n²)
 /// - Worst Case: O(n²)
-/// 
+///
 /// # Space Complexity
 /// - O(1) auxiliary space
-/// 
+///
 /// # Stability
 /// - Stable sort algorithm
 pub fn sort<T>(slice: &mut [T])
@@ -134,10 +134,22 @@ mod tests {
         }
 
         let mut items = vec![
-            Item { key: 1, original_index: 0 },
-            Item { key: 1, original_index: 1 },
-            Item { key: 2, original_index: 2 },
-            Item { key: 2, original_index: 3 },
+            Item {
+                key: 1,
+                original_index: 0,
+            },
+            Item {
+                key: 1,
+                original_index: 1,
+            },
+            Item {
+                key: 2,
+                original_index: 2,
+            },
+            Item {
+                key: 2,
+                original_index: 3,
+            },
         ];
 
         sort(&mut items);

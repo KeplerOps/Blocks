@@ -1,25 +1,25 @@
 use std::fmt::Debug;
 
 /// Selection Sort implementation for sorting slices.
-/// 
+///
 /// # Algorithm Overview
 /// Selection sort works by:
 /// 1. Dividing the input into a sorted and unsorted region
 /// 2. Finding the minimum element in the unsorted region
 /// 3. Swapping it with the first element of the unsorted region
 /// 4. Moving the boundary between sorted and unsorted regions one element to the right
-/// 
+///
 /// # Time Complexity
 /// - Best Case: O(n²)
 /// - Average Case: O(n²)
 /// - Worst Case: O(n²)
-/// 
+///
 /// # Space Complexity
 /// - O(1) auxiliary space
-/// 
+///
 /// # Stability
 /// - Not stable by default (equal elements may change relative order)
-/// 
+///
 /// # Advantages
 /// - Simple implementation
 /// - Performs well on small arrays
@@ -31,7 +31,7 @@ where
     T: PartialOrd + Clone + Debug,
 {
     let len = slice.len();
-    
+
     // One by one move boundary of unsorted subarray
     for i in 0..len {
         // Find the minimum element in unsorted array
@@ -163,7 +163,7 @@ mod tests {
         // Test that we're making O(n) swaps
         let mut count = 0;
         let mut arr = vec![5, 4, 3, 2, 1];
-        
+
         // Wrap the slice in a type that counts swaps
         struct SwapCounter<'a, T> {
             slice: &'a mut [T],
@@ -198,8 +198,12 @@ mod tests {
         }
 
         // For n=5, we expect at most n-1=4 swaps in selection sort
-        assert!(count <= arr.len() - 1, 
-            "Expected at most {} swaps, but got {}", arr.len() - 1, count);
+        assert!(
+            count <= arr.len() - 1,
+            "Expected at most {} swaps, but got {}",
+            arr.len() - 1,
+            count
+        );
         assert_eq!(arr, vec![1, 2, 3, 4, 5]);
     }
 }

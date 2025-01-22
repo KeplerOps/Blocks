@@ -160,7 +160,10 @@ impl SuffixTree {
             let active_char = self.text[self.active_edge];
 
             // We do lookups in a narrower scope so we don't keep a long-lived mutable ref
-            if !self.nodes[self.active_node].children.contains_key(&active_char) {
+            if !self.nodes[self.active_node]
+                .children
+                .contains_key(&active_char)
+            {
                 // No edge with `active_char`: create a new leaf node
                 let leaf_idx = self.new_node(pos, usize::MAX);
                 // Insert in a small block, so this mutable borrow ends quickly
@@ -214,9 +217,7 @@ impl SuffixTree {
                 let leaf_idx = self.new_node(pos, usize::MAX);
                 {
                     let split_node_ref = &mut self.nodes[split_node_idx];
-                    split_node_ref
-                        .children
-                        .insert(self.text[pos], leaf_idx);
+                    split_node_ref.children.insert(self.text[pos], leaf_idx);
                 }
 
                 // Update the original next_node to start after the split
@@ -259,8 +260,11 @@ impl SuffixTree {
         let mut is_leaf = true;
 
         // Collect children in a separate vector so we do not keep borrowing self.nodes
-        let children: Vec<(char, usize)> =
-            self.nodes[node_idx].children.iter().map(|(c, &i)| (*c, i)).collect();
+        let children: Vec<(char, usize)> = self.nodes[node_idx]
+            .children
+            .iter()
+            .map(|(c, &i)| (*c, i))
+            .collect();
 
         for (_, child_idx) in children {
             is_leaf = false;
@@ -336,7 +340,7 @@ mod tests {
     fn test_pattern_search() {
         let mut st = SuffixTree::new("banana");
         st.build();
-        
+
         assert_eq!(st.find_all("ana"), vec![1, 3]);
         assert_eq!(st.find_all("na"), vec![2, 4]);
         assert_eq!(st.find_all("ban"), vec![0]);
@@ -354,7 +358,7 @@ mod tests {
     fn test_unicode() {
         let mut st = SuffixTree::new("こんにちは世界");
         st.build();
-        
+
         assert_eq!(st.find_all("にち"), vec![2]);
         assert_eq!(st.find_all("世界"), vec![5]);
         assert_eq!(st.find_all("世に"), vec![]);
@@ -364,7 +368,7 @@ mod tests {
     fn test_overlapping_patterns() {
         let mut st = SuffixTree::new("aaaaa");
         st.build();
-        
+
         assert_eq!(st.find_all("aa"), vec![0, 1, 2, 3]);
         assert_eq!(st.find_all("aaa"), vec![0, 1, 2]);
     }
@@ -374,7 +378,7 @@ mod tests {
         let text = "a".repeat(1000) + "b";
         let mut st = SuffixTree::new(&text);
         st.build();
-        
+
         assert_eq!(st.find_all("aaa").len(), 997);
         assert_eq!(st.find_all("b"), vec![1000]);
         assert_eq!(st.find_all("c"), vec![]);

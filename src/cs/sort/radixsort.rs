@@ -1,29 +1,29 @@
 /// Radix Sort implementation for sorting slices of unsigned integers.
-/// 
+///
 /// # Algorithm Overview
 /// Radix sort is a non-comparative integer sorting algorithm that:
 /// 1. Takes each place value (digit) starting from least significant
 /// 2. Groups numbers by the value at that digit
 /// 3. Collects numbers maintaining relative order within each group
 /// 4. Repeats for each digit up to the most significant
-/// 
+///
 /// # Time Complexity
 /// - Best Case: O(d * (n + b)) where d is number of digits and b is the base
 /// - Average Case: O(d * (n + b))
 /// - Worst Case: O(d * (n + b))
-/// 
+///
 /// # Space Complexity
 /// - O(n + b) auxiliary space where b is the base (typically 10 or 256)
-/// 
+///
 /// # Stability
 /// - Stable sort algorithm
-/// 
+///
 /// # Advantages
 /// - Linear time complexity for fixed number of digits
 /// - Stable sorting algorithm
 /// - Works well when the range of possible digits is small
 /// - Can be faster than comparison-based sorts
-/// 
+///
 /// # Limitations
 /// - Only works with integers or strings
 /// - Performance depends on number of digits and base
@@ -35,7 +35,7 @@ pub fn sort(slice: &mut [u32]) {
 
     // Find the maximum number to know number of digits
     let max = find_max(slice);
-    
+
     // Do counting sort for every digit
     let mut exp = 1;
     while max / exp > 0 {
@@ -47,22 +47,22 @@ pub fn sort(slice: &mut [u32]) {
 /// Performs counting sort on a specific digit (0-9)
 fn counting_sort_by_digit(slice: &mut [u32], exp: u32) {
     let len = slice.len();
-    
+
     // Create output array and count array
     let mut output = vec![0; len];
-    let mut count = vec![0; 10]; // 10 possible digits (0-9)
-    
+    let mut count = [0; 10]; // 10 possible digits (0-9)
+
     // Store count of occurrences of current digit
     for &num in slice.iter() {
         count[get_digit(num, exp)] += 1;
     }
-    
+
     // Change count[i] so that it contains actual
     // position of this digit in output[]
     for i in 1..10 {
         count[i] += count[i - 1];
     }
-    
+
     // Build the output array
     // Moving from end to start maintains stability
     for &num in slice.iter().rev() {
@@ -70,7 +70,7 @@ fn counting_sort_by_digit(slice: &mut [u32], exp: u32) {
         count[digit] -= 1;
         output[count[digit]] = num;
     }
-    
+
     // Copy the output array to slice[]
     slice.copy_from_slice(&output);
 }
@@ -162,10 +162,22 @@ mod tests {
         }
 
         let pairs = vec![
-            Pair { key: 501, original_index: 0 },
-            Pair { key: 501, original_index: 1 },
-            Pair { key: 502, original_index: 2 },
-            Pair { key: 502, original_index: 3 },
+            Pair {
+                key: 501,
+                original_index: 0,
+            },
+            Pair {
+                key: 501,
+                original_index: 1,
+            },
+            Pair {
+                key: 502,
+                original_index: 2,
+            },
+            Pair {
+                key: 502,
+                original_index: 3,
+            },
         ];
 
         let mut values: Vec<u32> = pairs.iter().map(|p| p.key).collect();
@@ -177,9 +189,12 @@ mod tests {
                 if pairs[i].key == pairs[j].key {
                     let pos_i = values.iter().position(|&x| x == pairs[i].key).unwrap();
                     let pos_j = values.iter().rposition(|&x| x == pairs[j].key).unwrap();
-                    assert!(pos_i < pos_j, 
+                    assert!(
+                        pos_i < pos_j,
                         "Stability violated for equal elements at original positions {} and {}",
-                        pairs[i].original_index, pairs[j].original_index);
+                        pairs[i].original_index,
+                        pairs[j].original_index
+                    );
                 }
             }
         }
@@ -203,8 +218,8 @@ mod tests {
     #[test]
     fn test_get_digit() {
         // Test digit extraction at different positions
-        assert_eq!(get_digit(123, 1), 3);   // ones place
-        assert_eq!(get_digit(123, 10), 2);  // tens place
+        assert_eq!(get_digit(123, 1), 3); // ones place
+        assert_eq!(get_digit(123, 10), 2); // tens place
         assert_eq!(get_digit(123, 100), 1); // hundreds place
         assert_eq!(get_digit(123, 1000), 0); // thousands place
     }

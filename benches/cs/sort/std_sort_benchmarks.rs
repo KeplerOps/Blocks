@@ -1,6 +1,6 @@
-use criterion::{criterion_group, criterion_main, Criterion, BatchSize};
+use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 mod common;
-use common::{generate_data, SIZES, DISTRIBUTIONS};
+use common::{generate_data, DISTRIBUTIONS, SIZES};
 
 fn benchmark_std_sort(c: &mut Criterion) {
     let mut group = c.benchmark_group("std_sort");
@@ -23,4 +23,4 @@ fn benchmark_std_sort(c: &mut Criterion) {
 }
 
 criterion_group!(benches, benchmark_std_sort);
-criterion_main!(benches); 
+criterion_main!(benches);

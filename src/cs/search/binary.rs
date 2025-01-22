@@ -1,4 +1,4 @@
-use crate::cs::error::{Result, Error};
+use crate::cs::error::{Error, Result};
 
 /// Performs a binary search on a sorted slice to find a target value.
 ///
@@ -113,10 +113,7 @@ mod tests {
     #[test]
     fn test_unsorted_input() {
         let data = vec![3, 1, 4, 1, 5];
-        assert!(matches!(
-            search(&data, &4),
-            Err(Error::InvalidInput(_))
-        ));
+        assert!(matches!(search(&data, &4), Err(Error::InvalidInput(_))));
     }
 
     #[test]

@@ -57,7 +57,7 @@ pub fn find_all(text: impl AsRef<[u8]>, pattern: impl AsRef<[u8]>) -> Result<Vec
                 Some(&pos) => j.saturating_sub(pos),
                 None => j + 1,
             };
-            
+
             i += std::cmp::max(1, shift);
         }
     }
@@ -108,7 +108,7 @@ pub fn find_first(text: impl AsRef<[u8]>, pattern: impl AsRef<[u8]>) -> Result<O
             Some(&pos) => j.saturating_sub(pos),
             None => j + 1,
         };
-        
+
         i += std::cmp::max(1, shift);
     }
 
@@ -123,10 +123,7 @@ mod tests {
     fn test_empty_pattern() {
         let text = "hello";
         let pattern = "";
-        assert!(matches!(
-            find_all(text, pattern),
-            Err(Error::EmptyPattern)
-        ));
+        assert!(matches!(find_all(text, pattern), Err(Error::EmptyPattern)));
     }
 
     #[test]
@@ -191,8 +188,14 @@ mod tests {
     fn test_unicode_text() {
         let text = "Hello 世界!";
         let pattern = "世界";
-        assert_eq!(find_all(text.as_bytes(), pattern.as_bytes()).unwrap(), vec![6]);
-        assert_eq!(find_first(text.as_bytes(), pattern.as_bytes()).unwrap(), Some(6));
+        assert_eq!(
+            find_all(text.as_bytes(), pattern.as_bytes()).unwrap(),
+            vec![6]
+        );
+        assert_eq!(
+            find_first(text.as_bytes(), pattern.as_bytes()).unwrap(),
+            Some(6)
+        );
     }
 
     #[test]

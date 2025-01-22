@@ -1,4 +1,4 @@
-use crate::cs::error::{Result, Error};
+use crate::cs::error::{Error, Result};
 
 /// Performs a Fibonacci search on a sorted slice to find a target value.
 /// Uses Fibonacci numbers to divide the search space, which can be more
@@ -37,7 +37,9 @@ pub fn search<T: Ord>(data: &[T], target: &T) -> Result<Option<usize>> {
 
     // Verify the slice is sorted
     if !is_sorted(data) {
-        return Err(Error::invalid_input("Fibonacci search requires sorted input"));
+        return Err(Error::invalid_input(
+            "Fibonacci search requires sorted input",
+        ));
     }
 
     // Find the smallest Fibonacci number greater than or equal to len + 1
@@ -63,7 +65,7 @@ pub fn search<T: Ord>(data: &[T], target: &T) -> Result<Option<usize>> {
             std::cmp::Ordering::Less => {
                 // The target lies in the first part
                 fib = fib2;
-                fib1 = fib1 - fib2;
+                fib1 -= fib2;
                 fib2 = fib - fib1;
             }
             std::cmp::Ordering::Greater => {
@@ -150,10 +152,7 @@ mod tests {
     #[test]
     fn test_unsorted_input() {
         let data = vec![3, 1, 4, 1, 5];
-        assert!(matches!(
-            search(&data, &4),
-            Err(Error::InvalidInput(_))
-        ));
+        assert!(matches!(search(&data, &4), Err(Error::InvalidInput(_))));
     }
 
     #[test]
@@ -181,10 +180,10 @@ mod tests {
     #[test]
     fn test_fibonacci_sequence_lengths() {
         // Test with array sizes that match Fibonacci numbers
-        let data1: Vec<i32> = (0..3).collect();   // Fib: 3
-        let data2: Vec<i32> = (0..5).collect();   // Fib: 5
-        let data3: Vec<i32> = (0..8).collect();   // Fib: 8
-        let data4: Vec<i32> = (0..13).collect();  // Fib: 13
+        let data1: Vec<i32> = (0..3).collect(); // Fib: 3
+        let data2: Vec<i32> = (0..5).collect(); // Fib: 5
+        let data3: Vec<i32> = (0..8).collect(); // Fib: 8
+        let data4: Vec<i32> = (0..13).collect(); // Fib: 13
 
         assert!(matches!(search(&data1, &1).unwrap(), Some(1)));
         assert!(matches!(search(&data2, &3).unwrap(), Some(3)));
@@ -195,9 +194,9 @@ mod tests {
     #[test]
     fn test_non_fibonacci_lengths() {
         // Test with array sizes that don't match Fibonacci numbers
-        let data1: Vec<i32> = (0..4).collect();   // Between Fib 3 and 5
-        let data2: Vec<i32> = (0..7).collect();   // Between Fib 5 and 8
-        let data3: Vec<i32> = (0..10).collect();  // Between Fib 8 and 13
+        let data1: Vec<i32> = (0..4).collect(); // Between Fib 3 and 5
+        let data2: Vec<i32> = (0..7).collect(); // Between Fib 5 and 8
+        let data3: Vec<i32> = (0..10).collect(); // Between Fib 8 and 13
 
         assert!(matches!(search(&data1, &2).unwrap(), Some(2)));
         assert!(matches!(search(&data2, &4).unwrap(), Some(4)));

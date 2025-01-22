@@ -1,4 +1,4 @@
-use crate::cs::error::{Result, Error};
+use crate::cs::error::{Error, Result};
 
 /// Performs an exponential search on a sorted slice to find a target value.
 /// Also known as doubling or galloping search, it works by finding a range
@@ -36,7 +36,9 @@ pub fn search<T: Ord>(data: &[T], target: &T) -> Result<Option<usize>> {
 
     // Verify the slice is sorted
     if !is_sorted(data) {
-        return Err(Error::invalid_input("Exponential search requires sorted input"));
+        return Err(Error::invalid_input(
+            "Exponential search requires sorted input",
+        ));
     }
 
     // If target is the first element
@@ -59,7 +61,12 @@ pub fn search<T: Ord>(data: &[T], target: &T) -> Result<Option<usize>> {
 }
 
 /// Performs binary search in a specific range of the slice
-fn binary_search_range<T: Ord>(data: &[T], target: &T, start: usize, end: usize) -> Result<Option<usize>> {
+fn binary_search_range<T: Ord>(
+    data: &[T],
+    target: &T,
+    start: usize,
+    end: usize,
+) -> Result<Option<usize>> {
     let mut left = start;
     let mut right = end;
 
@@ -137,10 +144,7 @@ mod tests {
     #[test]
     fn test_unsorted_input() {
         let data = vec![3, 1, 4, 1, 5];
-        assert!(matches!(
-            search(&data, &4),
-            Err(Error::InvalidInput(_))
-        ));
+        assert!(matches!(search(&data, &4), Err(Error::InvalidInput(_))));
     }
 
     #[test]
@@ -169,7 +173,7 @@ mod tests {
     fn test_exponential_bounds() {
         // Test with array sizes that hit different exponential bounds
         let data: Vec<i32> = (0..16).collect();
-        
+
         // Test elements at exponential positions (1, 2, 4, 8, 16)
         assert!(matches!(search(&data, &1).unwrap(), Some(1)));
         assert!(matches!(search(&data, &2).unwrap(), Some(2)));
@@ -182,13 +186,13 @@ mod tests {
     fn test_performance_characteristics() {
         // Create a large sorted array
         let data: Vec<i32> = (0..1_000_000).collect();
-        
+
         // Test early elements (should be found quickly)
         assert!(matches!(search(&data, &5).unwrap(), Some(5)));
-        
+
         // Test middle elements
         assert!(matches!(search(&data, &500_000).unwrap(), Some(500_000)));
-        
+
         // Test late elements
         assert!(matches!(search(&data, &999_999).unwrap(), Some(999_999)));
     }

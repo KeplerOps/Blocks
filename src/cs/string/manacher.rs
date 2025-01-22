@@ -69,9 +69,9 @@ pub fn longest_palindrome(text: &str) -> Result<String> {
 
         // Attempt to expand around center i
         // Use checked arithmetic to prevent overflow
-        while i + 1 + p[i] < n && i >= 1 + p[i] {
+        while i + 1 + p[i] < n && i > p[i] {
             let right_pos = i + 1 + p[i];
-            let left_pos = i.checked_sub(1 + p[i]).unwrap_or(0);
+            let left_pos = i.saturating_sub(1 + p[i]);
             if chars[right_pos] != chars[left_pos] {
                 break;
             }
@@ -100,11 +100,11 @@ pub fn longest_palindrome(text: &str) -> Result<String> {
         .checked_sub(1 + max_len)
         .map(|x| x / 2)
         .ok_or_else(|| StringError::invalid_input("Invalid palindrome position"))?;
-    
+
     if start + max_len > text.len() {
         return Err(StringError::invalid_input("Invalid palindrome length"));
     }
-    
+
     Ok(text[start..start + max_len].to_string())
 }
 
@@ -170,4 +170,4 @@ mod tests {
             "geeksskeeg"
         );
     }
-} 
+}

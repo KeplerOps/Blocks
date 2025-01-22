@@ -1,5 +1,5 @@
 use blocks::cs::string::suffix_array::SuffixArray;
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 
 const BENCH_TEXT: &str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.";
 const PATTERNS: [&str; 4] = ["dolor", "ipsum", "exercitation", "nonexistent"];
@@ -59,7 +59,7 @@ fn bench_suffix_array(c: &mut Criterion) {
     // Compare with naive search
     let pattern = "dolor";
     let sa = SuffixArray::new(BENCH_TEXT);
-    
+
     group.bench_function("comparison/suffix_array", |b| {
         b.iter(|| black_box(sa.find_all(pattern).unwrap()))
     });
@@ -87,4 +87,4 @@ fn bench_suffix_array(c: &mut Criterion) {
 }
 
 criterion_group!(benches, bench_suffix_array);
-criterion_main!(benches); 
+criterion_main!(benches);

@@ -1,5 +1,5 @@
 /// Suffix Array implementation using the prefix doubling algorithm.
-/// 
+///
 /// A suffix array is a sorted array of all suffixes of a string. It allows for
 /// efficient string operations like pattern matching and longest common substring.
 /// This implementation uses the prefix doubling technique which runs in O(n log n) time
@@ -8,7 +8,7 @@
 /// # Example
 /// ```
 /// use blocks::cs::string::suffix_array::SuffixArray;
-/// 
+///
 /// let text = "banana";
 /// let sa = SuffixArray::new(text);
 /// ```
@@ -43,12 +43,12 @@ impl SuffixArray {
         let mut array: Vec<usize> = (0..n).collect();
         let mut rank = vec![0; n];
         let mut tmp_rank = vec![0; n];
-        
+
         // Initialize ranks with character values
         for (i, ch) in chars.iter().enumerate() {
             rank[i] = *ch as usize;
         }
-        
+
         let mut k = 1;
         // Main prefix doubling loop
         while k < n {
@@ -60,7 +60,7 @@ impl SuffixArray {
                 let rj1 = if j + k < n { rank[j + k] } else { 0 };
                 (ri, ri1).cmp(&(rj, rj1))
             });
-            
+
             // Update ranks
             tmp_rank[array[0]] = 0;
             for i in 1..n {
@@ -68,26 +68,26 @@ impl SuffixArray {
                 let prev = array[i - 1];
                 let curr_pair = (rank[curr], if curr + k < n { rank[curr + k] } else { 0 });
                 let prev_pair = (rank[prev], if prev + k < n { rank[prev + k] } else { 0 });
-                
+
                 tmp_rank[curr] = if curr_pair == prev_pair {
                     tmp_rank[prev]
                 } else {
                     i
                 };
             }
-            
+
             rank.copy_from_slice(&tmp_rank);
-            
+
             if rank[array[n - 1]] == n - 1 {
                 break; // All suffixes are sorted
             }
-            
+
             k *= 2;
         }
-        
+
         // Compute LCP array using Kasai's algorithm
         let lcp = Self::compute_lcp_array(&chars, &array, &rank);
-        
+
         Self {
             text,
             array,
@@ -95,49 +95,49 @@ impl SuffixArray {
             lcp,
         }
     }
-    
+
     /// Computes the LCP (Longest Common Prefix) array using Kasai's algorithm.
-    /// 
+    ///
     /// The LCP array stores the length of the longest common prefix between
     /// adjacent suffixes in the suffix array.
-    /// 
+    ///
     /// Time complexity: O(n)
     /// Space complexity: O(n)
     fn compute_lcp_array(chars: &[char], suffix_array: &[usize], rank: &[usize]) -> Vec<usize> {
         let n = chars.len();
         let mut lcp = vec![0; n];
         let mut h = 0; // height of previous LCP
-        
+
         for i in 0..n {
             if rank[i] > 0 {
                 let j = suffix_array[rank[i] - 1];
-                
+
                 // Calculate LCP between suffixes starting at i and j
                 while i + h < n && j + h < n && chars[i + h] == chars[j + h] {
                     h += 1;
                 }
-                
+
                 lcp[rank[i]] = h;
-                
+
                 if h > 0 {
-                    h -= 1;
+                    h = h.saturating_sub(1);
                 }
             }
         }
-        
+
         lcp
     }
-    
+
     /// Returns the constructed suffix array.
     pub fn get_array(&self) -> &[usize] {
         &self.array
     }
-    
+
     /// Returns the rank array.
     pub fn get_rank(&self) -> &[usize] {
         &self.rank
     }
-    
+
     /// Returns the LCP array.
     pub fn get_lcp(&self) -> &[usize] {
         &self.lcp
@@ -176,7 +176,8 @@ impl SuffixArray {
     /// * `Ok(Option<usize>)` - Starting position of first occurrence, if found
     /// * `Err(String)` - Error message if pattern is invalid
     pub fn find_first(&self, pattern: &str) -> Result<Option<usize>, String> {
-        self.find_all(pattern).map(|positions| positions.first().copied())
+        self.find_all(pattern)
+            .map(|positions| positions.first().copied())
     }
 
     /// Finds the range of suffixes that start with the pattern using binary search.
@@ -249,7 +250,7 @@ mod tests {
         let text = "banana";
         let sa = SuffixArray::new(text);
         let array = sa.get_array();
-        
+
         // Expected suffix array for "banana":
         // Suffixes sorted lexicographically:
         // 5: a
@@ -266,7 +267,7 @@ mod tests {
         let text = "banana";
         let sa = SuffixArray::new(text);
         let lcp = sa.get_lcp();
-        
+
         // Expected LCP values for adjacent suffixes in suffix array:
         // [5, 3, 1, 0, 4, 2] -> suffixes
         // [a, ana, anana, banana, na, nana]
@@ -278,7 +279,7 @@ mod tests {
     fn test_find_all() {
         let text = "banana";
         let sa = SuffixArray::new(text);
-        
+
         assert_eq!(sa.find_all("ana").unwrap(), vec![1, 3]);
         assert_eq!(sa.find_all("na").unwrap(), vec![2, 4]);
         assert_eq!(sa.find_all("a").unwrap(), vec![1, 3, 5]);
@@ -290,7 +291,7 @@ mod tests {
     fn test_find_first() {
         let text = "banana";
         let sa = SuffixArray::new(text);
-        
+
         assert_eq!(sa.find_first("ana").unwrap(), Some(1));
         assert_eq!(sa.find_first("na").unwrap(), Some(2));
         assert_eq!(sa.find_first("a").unwrap(), Some(1));
@@ -302,7 +303,7 @@ mod tests {
     fn test_empty_pattern() {
         let text = "banana";
         let sa = SuffixArray::new(text);
-        
+
         assert!(sa.find_all("").is_err());
         assert!(sa.find_first("").is_err());
     }
@@ -311,7 +312,7 @@ mod tests {
     fn test_pattern_longer_than_text() {
         let text = "abc";
         let sa = SuffixArray::new(text);
-        
+
         assert_eq!(sa.find_all("abcd").unwrap(), vec![]);
         assert_eq!(sa.find_first("abcd").unwrap(), None);
     }
@@ -320,7 +321,7 @@ mod tests {
     fn test_unicode_text() {
         let text = "こんにちは世界";
         let sa = SuffixArray::new(text);
-        
+
         assert_eq!(sa.find_all("にち").unwrap(), vec![2]);
         assert_eq!(sa.find_all("世界").unwrap(), vec![5]);
         assert_eq!(sa.find_all("ちは").unwrap(), vec![3]);
@@ -330,7 +331,7 @@ mod tests {
     fn test_overlapping_patterns() {
         let text = "aaaaa";
         let sa = SuffixArray::new(text);
-        
+
         // Should find all overlapping occurrences
         assert_eq!(sa.find_all("aa").unwrap(), vec![0, 1, 2, 3]);
         assert_eq!(sa.find_all("aaa").unwrap(), vec![0, 1, 2]);
@@ -340,7 +341,7 @@ mod tests {
     fn test_long_text() {
         let text = "a".repeat(10000) + "b";
         let sa = SuffixArray::new(&text);
-        
+
         // Should handle long texts efficiently
         assert_eq!(sa.find_first("b").unwrap(), Some(10000));
         assert_eq!(sa.find_all("aa").unwrap().len(), 9999);
@@ -349,10 +350,10 @@ mod tests {
     #[test]
     fn test_module_level_functions() {
         let text = "banana";
-        
+
         assert_eq!(find_all(text, "ana").unwrap(), vec![1, 3]);
         assert_eq!(find_first(text, "ana").unwrap(), Some(1));
-        
+
         assert!(find_all(text, "").is_err());
         assert!(find_first(text, "").is_err());
     }
@@ -361,7 +362,7 @@ mod tests {
     fn test_repeated_patterns() {
         let text = "abababab";
         let sa = SuffixArray::new(text);
-        
+
         assert_eq!(sa.find_all("ab").unwrap(), vec![0, 2, 4, 6]);
         assert_eq!(sa.find_all("aba").unwrap(), vec![0, 2, 4]);
         assert_eq!(sa.find_all("abab").unwrap(), vec![0, 2, 4]);
@@ -371,8 +372,8 @@ mod tests {
     fn test_case_sensitivity() {
         let text = "bAnAnA";
         let sa = SuffixArray::new(text);
-        
+
         assert_eq!(sa.find_all("ana").unwrap(), vec![]);
         assert_eq!(sa.find_all("AnA").unwrap(), vec![1, 3]);
     }
-} 
+}

@@ -1,4 +1,4 @@
-use crate::cs::error::{Result, Error};
+use crate::cs::error::{Error, Result};
 
 /// Performs a jump search on a sorted slice to find a target value.
 /// Uses block jumping to reduce the number of comparisons needed.
@@ -65,12 +65,11 @@ pub fn search<T: Ord>(data: &[T], target: &T) -> Result<Option<usize>> {
     step = step.min(data.len());
 
     // Linear search in the identified block
-    for i in prev..step {
-        if &data[i] == target {
-            return Ok(Some(i));
-        }
-        if &data[i] > target {
-            break;
+    for (i, item) in data.iter().enumerate().take(step).skip(prev) {
+        match item.cmp(target) {
+            std::cmp::Ordering::Equal => return Ok(Some(i)),
+            std::cmp::Ordering::Greater => break,
+            _ => continue,
         }
     }
 
@@ -139,10 +138,7 @@ mod tests {
     #[test]
     fn test_unsorted_input() {
         let data = vec![3, 1, 4, 1, 5];
-        assert!(matches!(
-            search(&data, &4),
-            Err(Error::InvalidInput(_))
-        ));
+        assert!(matches!(search(&data, &4), Err(Error::InvalidInput(_))));
     }
 
     #[test]
@@ -170,9 +166,9 @@ mod tests {
     #[test]
     fn test_various_jump_sizes() {
         // Test with array sizes that produce different jump sizes
-        let data1: Vec<i32> = (0..4).collect();   // jump_size = 2
-        let data2: Vec<i32> = (0..9).collect();   // jump_size = 3
-        let data3: Vec<i32> = (0..16).collect();  // jump_size = 4
+        let data1: Vec<i32> = (0..4).collect(); // jump_size = 2
+        let data2: Vec<i32> = (0..9).collect(); // jump_size = 3
+        let data3: Vec<i32> = (0..16).collect(); // jump_size = 4
 
         assert!(matches!(search(&data1, &2).unwrap(), Some(2)));
         assert!(matches!(search(&data2, &5).unwrap(), Some(5)));
@@ -200,7 +196,7 @@ mod tests {
     #[test]
     fn test_prev_exceeds_len() {
         let data = vec![1, 3, 5, 7, 9, 11, 13, 15, 17];
-        let target = 100;  // This will cause prev to exceed data.len()
+        let target = 100; // This will cause prev to exceed data.len()
         assert!(matches!(search(&data, &target).unwrap(), None));
     }
 

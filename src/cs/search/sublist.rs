@@ -1,4 +1,4 @@
-use crate::cs::error::{Result, Error};
+use crate::cs::error::{Error, Result};
 
 /// Performs a sublist search to find a pattern within a larger list.
 /// Returns the starting index of the first occurrence of the pattern.
@@ -46,7 +46,7 @@ pub fn search<T: PartialEq>(data: &[T], pattern: &[T]) -> Result<Option<usize>> 
     // Iterate through possible starting positions in data
     for i in 0..=data.len() - pattern.len() {
         let mut found = true;
-        
+
         // Check if pattern matches at current position
         for j in 0..pattern.len() {
             if data[i + j] != pattern[j] {
@@ -140,13 +140,11 @@ fn compute_lps<T: PartialEq>(pattern: &[T]) -> Vec<usize> {
             len += 1;
             lps[i] = len;
             i += 1;
+        } else if len != 0 {
+            len = lps[len - 1];
         } else {
-            if len != 0 {
-                len = lps[len - 1];
-            } else {
-                lps[i] = 0;
-                i += 1;
-            }
+            lps[i] = 0;
+            i += 1;
         }
     }
 

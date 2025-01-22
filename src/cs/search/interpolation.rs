@@ -1,4 +1,4 @@
-use crate::cs::error::{Result, Error};
+use crate::cs::error::{Error, Result};
 use num_traits::ToPrimitive;
 use std::cmp::Ord;
 
@@ -40,7 +40,9 @@ where
 
     // Verify the slice is sorted
     if !is_sorted(data) {
-        return Err(Error::invalid_input("Interpolation search requires sorted input"));
+        return Err(Error::invalid_input(
+            "Interpolation search requires sorted input",
+        ));
     }
 
     let mut low = 0;
@@ -61,9 +63,9 @@ where
         }
 
         // Calculate the probable position using interpolation formula
-        let pos_f = low as f64
-            + ((high - low) as f64 * (target_f - low_val_f) / (high_val_f - low_val_f));
-        
+        let pos_f =
+            low as f64 + ((high - low) as f64 * (target_f - low_val_f) / (high_val_f - low_val_f));
+
         let pos = pos_f.round() as usize;
 
         // Bounds check
@@ -93,9 +95,9 @@ fn is_sorted<T: Ord>(data: &[T]) -> bool {
 
 /// Converts a value to f64 for interpolation calculation
 fn to_f64<T: ToPrimitive>(value: &T) -> Result<f64> {
-    value.to_f64().ok_or_else(|| {
-        Error::invalid_input("Failed to convert value to f64 for interpolation")
-    })
+    value
+        .to_f64()
+        .ok_or_else(|| Error::invalid_input("Failed to convert value to f64 for interpolation"))
 }
 
 #[cfg(test)]
@@ -155,10 +157,7 @@ mod tests {
     #[test]
     fn test_unsorted_input() {
         let data = vec![3, 1, 4, 1, 5];
-        assert!(matches!(
-            search(&data, &4),
-            Err(Error::InvalidInput(_))
-        ));
+        assert!(matches!(search(&data, &4), Err(Error::InvalidInput(_))));
     }
 
     #[test]
@@ -217,9 +216,15 @@ mod tests {
         struct NonNumeric(i32);
 
         impl ToPrimitive for NonNumeric {
-            fn to_i64(&self) -> Option<i64> { None }
-            fn to_u64(&self) -> Option<u64> { None }
-            fn to_f64(&self) -> Option<f64> { None }
+            fn to_i64(&self) -> Option<i64> {
+                None
+            }
+            fn to_u64(&self) -> Option<u64> {
+                None
+            }
+            fn to_f64(&self) -> Option<f64> {
+                None
+            }
         }
 
         let data = vec![NonNumeric(1), NonNumeric(2), NonNumeric(3)];

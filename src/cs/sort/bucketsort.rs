@@ -1,29 +1,29 @@
 /// Bucket Sort implementation for sorting slices of floating-point numbers in the range [0, 1).
-/// 
+///
 /// # Algorithm Overview
 /// Bucket sort works by:
 /// 1. Creating n empty buckets (where n is the length of the input)
 /// 2. Putting each element into its corresponding bucket based on its value
 /// 3. Sorting each non-empty bucket (using insertion sort)
 /// 4. Concatenating all buckets in order
-/// 
+///
 /// # Time Complexity
 /// - Best Case: Ω(n + k) when elements are uniformly distributed
 /// - Average Case: Θ(n + k) when elements are uniformly distributed
 /// - Worst Case: O(n²) when all elements go into the same bucket
-/// 
+///
 /// # Space Complexity
 /// - O(n + k) auxiliary space where k is the number of buckets
-/// 
+///
 /// # Stability
 /// - Stable if the underlying sort is stable (insertion sort in this case)
-/// 
+///
 /// # Advantages
 /// - Linear time complexity for uniformly distributed data
 /// - Works well with floating-point numbers
 /// - Can be parallelized easily
 /// - Good cache performance due to locality of reference
-/// 
+///
 /// # Limitations
 /// - Requires uniformly distributed input for best performance
 /// - Not in-place sorting algorithm
@@ -35,21 +35,21 @@ pub fn sort(slice: &mut [f64]) {
     }
 
     let n = slice.len();
-    
+
     // Create n empty buckets
     let mut buckets: Vec<Vec<f64>> = vec![Vec::new(); n];
-    
+
     // Put array elements in different buckets
     for &num in slice.iter() {
         let idx = get_bucket_index(num, n);
         buckets[idx].push(num);
     }
-    
+
     // Sort individual buckets
     for bucket in buckets.iter_mut() {
         insertion_sort(bucket);
     }
-    
+
     // Concatenate all buckets into slice
     let mut index = 0;
     for bucket in buckets.iter() {
@@ -61,16 +61,16 @@ pub fn sort(slice: &mut [f64]) {
 }
 
 /// Sorts a bucket using insertion sort
-fn insertion_sort(bucket: &mut Vec<f64>) {
+fn insertion_sort(bucket: &mut [f64]) {
     for i in 1..bucket.len() {
         let key = bucket[i];
         let mut j = i;
-        
+
         while j > 0 && bucket[j - 1] > key {
             bucket[j] = bucket[j - 1];
             j -= 1;
         }
-        
+
         bucket[j] = key;
     }
 }
@@ -151,10 +151,22 @@ mod tests {
         }
 
         let pairs = vec![
-            Pair { key: 0.5, original_index: 0 },
-            Pair { key: 0.5, original_index: 1 },
-            Pair { key: 0.7, original_index: 2 },
-            Pair { key: 0.7, original_index: 3 },
+            Pair {
+                key: 0.5,
+                original_index: 0,
+            },
+            Pair {
+                key: 0.5,
+                original_index: 1,
+            },
+            Pair {
+                key: 0.7,
+                original_index: 2,
+            },
+            Pair {
+                key: 0.7,
+                original_index: 3,
+            },
         ];
 
         let mut values: Vec<f64> = pairs.iter().map(|p| p.key).collect();
@@ -164,11 +176,20 @@ mod tests {
         for i in 0..pairs.len() - 1 {
             for j in i + 1..pairs.len() {
                 if (pairs[i].key - pairs[j].key).abs() < EPSILON {
-                    let pos_i = values.iter().position(|&x| (x - pairs[i].key).abs() < EPSILON).unwrap();
-                    let pos_j = values.iter().rposition(|&x| (x - pairs[j].key).abs() < EPSILON).unwrap();
-                    assert!(pos_i < pos_j, 
+                    let pos_i = values
+                        .iter()
+                        .position(|&x| (x - pairs[i].key).abs() < EPSILON)
+                        .unwrap();
+                    let pos_j = values
+                        .iter()
+                        .rposition(|&x| (x - pairs[j].key).abs() < EPSILON)
+                        .unwrap();
+                    assert!(
+                        pos_i < pos_j,
                         "Stability violated for equal elements at original positions {} and {}",
-                        pairs[i].original_index, pairs[j].original_index);
+                        pairs[i].original_index,
+                        pairs[j].original_index
+                    );
                 }
             }
         }

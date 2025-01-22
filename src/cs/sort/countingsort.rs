@@ -1,29 +1,29 @@
 /// Counting Sort implementation for sorting slices of unsigned integers.
-/// 
+///
 /// # Algorithm Overview
 /// Counting sort works by:
 /// 1. Finding the range of input data (min to max)
 /// 2. Counting the frequency of each value in the input range
 /// 3. Building the cumulative frequency array
 /// 4. Placing each element in its sorted position
-/// 
+///
 /// # Time Complexity
 /// - Best Case: O(n + k) where k is the range of input
 /// - Average Case: O(n + k)
 /// - Worst Case: O(n + k)
-/// 
+///
 /// # Space Complexity
 /// - O(k) auxiliary space where k is the range of input
-/// 
+///
 /// # Stability
 /// - Stable sort algorithm
-/// 
+///
 /// # Advantages
 /// - Linear time complexity when k = O(n)
 /// - Excellent for integers with known, limited range
 /// - Stable sorting algorithm
 /// - Can be used as a subroutine in radix sort
-/// 
+///
 /// # Limitations
 /// - Only works with non-negative integers
 /// - Not efficient when the range of input values is much larger than n
@@ -36,36 +36,36 @@ pub fn sort(slice: &mut [u32]) {
 
     // Find the range of input array
     let max = find_max(slice);
-    
+
     // If range is too large, fall back to standard library sort
     if max > 1_000_000 {
         slice.sort_unstable();
         return;
     }
-    
+
     // Create a count array to store count of each unique value
     let mut count = vec![0; (max + 1) as usize];
-    
+
     // Store count of each value
     for &value in slice.iter() {
         count[value as usize] += 1;
     }
-    
+
     // Modify count array to store actual position of each value
     for i in 1..count.len() {
         count[i] += count[i - 1];
     }
-    
+
     // Build the output array
     let mut output = vec![0; slice.len()];
-    
+
     // Place elements in sorted order
     // Moving from end to start maintains stability
     for &value in slice.iter().rev() {
         count[value as usize] -= 1;
         output[count[value as usize]] = value;
     }
-    
+
     // Copy back to original array
     slice.copy_from_slice(&output);
 }
@@ -160,10 +160,22 @@ mod tests {
         }
 
         let pairs = vec![
-            Pair { key: 1, original_index: 0 },
-            Pair { key: 1, original_index: 1 },
-            Pair { key: 2, original_index: 2 },
-            Pair { key: 2, original_index: 3 },
+            Pair {
+                key: 1,
+                original_index: 0,
+            },
+            Pair {
+                key: 1,
+                original_index: 1,
+            },
+            Pair {
+                key: 2,
+                original_index: 2,
+            },
+            Pair {
+                key: 2,
+                original_index: 3,
+            },
         ];
 
         let mut values: Vec<u32> = pairs.iter().map(|p| p.key).collect();
@@ -193,9 +205,13 @@ mod tests {
         for i in 0..pairs.len() - 1 {
             for j in i + 1..pairs.len() {
                 if pairs[i].key == pairs[j].key {
-                    assert!(position_map[pairs[i].original_index] < position_map[pairs[j].original_index],
+                    assert!(
+                        position_map[pairs[i].original_index]
+                            < position_map[pairs[j].original_index],
                         "Stability violated for equal elements at original positions {} and {}",
-                        pairs[i].original_index, pairs[j].original_index);
+                        pairs[i].original_index,
+                        pairs[j].original_index
+                    );
                 }
             }
         }

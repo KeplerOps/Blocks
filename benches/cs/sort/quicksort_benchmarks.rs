@@ -1,7 +1,7 @@
-use criterion::{criterion_group, criterion_main, Criterion, BatchSize};
 use blocks::cs::sort::quick_sort;
+use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 mod common;
-use common::{generate_data, SIZES, DISTRIBUTIONS};
+use common::{generate_data, DISTRIBUTIONS, SIZES};
 
 fn benchmark_quicksort(c: &mut Criterion) {
     let mut group = c.benchmark_group("quicksort");
@@ -25,7 +25,7 @@ fn benchmark_quicksort(c: &mut Criterion) {
 
 #[cfg(feature = "parallel")]
 fn benchmark_parallel_quicksort(c: &mut Criterion) {
-    let sizes = [100_000, 1_000_000, 10_000_000];  // Keep larger sizes for parallel
+    let sizes = [100_000, 1_000_000, 10_000_000]; // Keep larger sizes for parallel
 
     let mut group = c.benchmark_group("parallel_quicksort");
     group.sample_size(10);

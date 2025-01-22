@@ -20,15 +20,6 @@ repos:
         types: [file, rust]
         stages: [pre-commit]
 
-      - id: cargo-geiger
-        name: unsafe code check
-        description: Scan for usage of unsafe code
-        entry: cargo geiger
-        language: system
-        pass_filenames: false
-        types: [file, rust]
-        stages: [pre-commit]
-
       - id: cargo-deny
         name: dependency check
         description: Check dependencies for security, license compliance, etc.

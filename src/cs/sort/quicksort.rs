@@ -20,7 +20,7 @@
 pub fn sort<T: Ord>(arr: &mut [T]) {
     // Threshold for switching to insertion sort
     const INSERTION_SORT_THRESHOLD: usize = 10;
-    
+
     fn insertion_sort<T: Ord>(arr: &mut [T]) {
         for i in 1..arr.len() {
             let mut j = i;
@@ -38,7 +38,7 @@ pub fn sort<T: Ord>(arr: &mut [T]) {
 
         while let Some((start, end)) = stack.pop() {
             let len = end - start;
-            
+
             if len <= 1 {
                 continue;
             }
@@ -73,7 +73,7 @@ fn partition<T: Ord>(arr: &mut [T]) -> usize {
     // Median-of-three pivot selection
     let mid = len / 2;
     let last = len - 1;
-    
+
     // Sort first, middle, and last elements
     if arr[0] > arr[mid] {
         arr.swap(0, mid);
@@ -201,7 +201,8 @@ mod tests {
 
     impl Ord for Person {
         fn cmp(&self, other: &Self) -> Ordering {
-            self.age.cmp(&other.age)
+            self.age
+                .cmp(&other.age)
                 .then_with(|| self.name.cmp(&other.name))
         }
     }
@@ -209,20 +210,47 @@ mod tests {
     #[test]
     fn test_custom_type() {
         let mut people = vec![
-            Person { name: "Alice".to_string(), age: 30 },
-            Person { name: "Bob".to_string(), age: 25 },
-            Person { name: "Charlie".to_string(), age: 35 },
-            Person { name: "David".to_string(), age: 25 },
+            Person {
+                name: "Alice".to_string(),
+                age: 30,
+            },
+            Person {
+                name: "Bob".to_string(),
+                age: 25,
+            },
+            Person {
+                name: "Charlie".to_string(),
+                age: 35,
+            },
+            Person {
+                name: "David".to_string(),
+                age: 25,
+            },
         ];
-        
+
         sort(&mut people);
-        
-        assert_eq!(people, vec![
-            Person { name: "Bob".to_string(), age: 25 },
-            Person { name: "David".to_string(), age: 25 },
-            Person { name: "Alice".to_string(), age: 30 },
-            Person { name: "Charlie".to_string(), age: 35 },
-        ]);
+
+        assert_eq!(
+            people,
+            vec![
+                Person {
+                    name: "Bob".to_string(),
+                    age: 25
+                },
+                Person {
+                    name: "David".to_string(),
+                    age: 25
+                },
+                Person {
+                    name: "Alice".to_string(),
+                    age: 30
+                },
+                Person {
+                    name: "Charlie".to_string(),
+                    age: 35
+                },
+            ]
+        );
     }
 
     // Performance edge cases

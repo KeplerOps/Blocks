@@ -117,8 +117,8 @@ impl<const B: u64, const M: u64> RollingHash<B, M> {
 
         // Adjust base_power down since the window is now one shorter
         if self.window_size > 0 {
-            let b_inv = mod_inv(B % M, M)
-                .expect("B and M must be coprime for modular inverse to exist");
+            let b_inv =
+                mod_inv(B % M, M).expect("B and M must be coprime for modular inverse to exist");
             self.base_power = (self.base_power % M).wrapping_mul(b_inv) % M;
         } else {
             self.base_power = 1;
@@ -212,7 +212,7 @@ mod tests {
     #[test]
     fn test_window_operations() {
         let mut rh: RollingHash<257, 1_000_000_007> = RollingHash::new();
-        
+
         // Push sequence of characters
         let text = b"abcdef";
         for &byte in text {

@@ -1,29 +1,29 @@
 /// Heapsort implementation for sorting slices.
-/// 
+///
 /// # Algorithm Overview
 /// Heapsort is a comparison-based sorting algorithm that uses a binary heap data structure.
 /// The algorithm:
 /// 1. Builds a max-heap from the input array using Floyd's bottom-up construction (O(n))
 /// 2. Repeatedly extracts the maximum element and places it at the end (n * O(log n))
 /// 3. Maintains the heap property after each extraction (O(log n) per operation)
-/// 
+///
 /// # Performance Characteristics
 /// - Cache behavior: Moderate, with non-sequential access patterns
 /// - Branch prediction: Optimized for common cases
 /// - Memory usage: In-place, O(1) auxiliary space
-/// 
+///
 /// # Time Complexity
 /// - Build heap: O(n)
 /// - Heapify: O(log n)
 /// - Overall: O(n log n) for all cases
-/// 
+///
 /// # Space Complexity
 /// - O(1) auxiliary space
 /// - In-place sorting
-/// 
+///
 /// # Stability
 /// - Not stable: equal elements may be reordered
-/// 
+///
 /// # Examples
 /// ```
 /// use blocks::cs::sort::heap_sort;
@@ -31,7 +31,7 @@
 /// heap_sort(&mut numbers).expect("Sort should succeed");
 /// assert_eq!(numbers, vec![1, 1, 2, 3, 3, 4, 5, 5, 6, 9]);
 /// ```
-/// 
+///
 /// # Errors
 /// Returns `HeapSortError::ArrayTooLarge` if the array is too large to safely process
 /// Returns `HeapSortError::InvalidRootIndex` if an invalid root index is provided to heapify
@@ -48,10 +48,14 @@ pub enum HeapSortError {
 impl std::fmt::Display for HeapSortError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            HeapSortError::ArrayTooLarge(size) => 
-                write!(f, "Array size {} is too large, would cause integer overflow in heap operations", size),
-            HeapSortError::InvalidRootIndex { root, len } => 
-                write!(f, "Invalid root index {} for heap of length {}", root, len),
+            HeapSortError::ArrayTooLarge(size) => write!(
+                f,
+                "Array size {} is too large, would cause integer overflow in heap operations",
+                size
+            ),
+            HeapSortError::InvalidRootIndex { root, len } => {
+                write!(f, "Invalid root index {} for heap of length {}", root, len)
+            }
         }
     }
 }
@@ -96,12 +100,13 @@ pub fn sort<T: Ord + Send>(slice: &mut [T]) -> Result<()> {
 
     // Extract elements from heap one by one
     for i in (0..slice.len()).rev() {
-        if i > 0 {  // Don't swap when i == 0
+        if i > 0 {
+            // Don't swap when i == 0
             slice.swap(0, i);
             heapify_iterative(&mut slice[..i], 0)?;
         }
     }
-    
+
     Ok(())
 }
 
@@ -109,23 +114,23 @@ pub fn sort<T: Ord + Send>(slice: &mut [T]) -> Result<()> {
 fn parallel_sort<T: Ord + Send>(slice: &mut [T]) -> Result<()> {
     let len = slice.len();
     let chunk_size = (len / rayon::current_num_threads()).max(PARALLEL_THRESHOLD);
-    
+
     // Build sub-heaps in parallel
-    slice.par_chunks_mut(chunk_size)
+    slice
+        .par_chunks_mut(chunk_size)
         .try_for_each(|chunk| build_max_heap(chunk))?;
-    
+
     // Merge sub-heaps
     for i in (chunk_size..len).step_by(chunk_size) {
         merge_heaps(&mut slice[..i + chunk_size.min(len - i)])?;
     }
-    
+
     // Extract elements in parallel for large arrays
     if len >= PARALLEL_THRESHOLD {
-        slice.par_chunks_mut(chunk_size)
+        slice
+            .par_chunks_mut(chunk_size)
             .enumerate()
-            .try_for_each(|(i, chunk)| {
-                extract_from_heap(chunk, i * chunk_size)
-            })?;
+            .try_for_each(|(i, chunk)| extract_from_heap(chunk, i * chunk_size))?;
     } else {
         // Sequential extraction for smaller arrays
         for i in (0..len).rev() {
@@ -135,34 +140,33 @@ fn parallel_sort<T: Ord + Send>(slice: &mut [T]) -> Result<()> {
             }
         }
     }
-    
+
     Ok(())
 }
 
 #[cfg(feature = "parallel")]
 fn parallel_merge_heaps<T: Ord + Send>(slice: &mut [T]) -> Result<()> {
     use rayon::prelude::*;
-    
+
     let len = slice.len();
     let chunk_size = (len / rayon::current_num_threads()).max(PARALLEL_THRESHOLD);
-    
+
     // Merge in parallel using a divide-and-conquer approach
     for merge_size in (chunk_size..=len).step_by(chunk_size) {
-        slice.par_chunks_mut(merge_size * 2)
-            .try_for_each(|chunk| {
-                if chunk.len() > merge_size {
-                    merge_heap_sections(chunk, merge_size)
-                } else {
-                    Ok(())
-                }
-            })?;
+        slice.par_chunks_mut(merge_size * 2).try_for_each(|chunk| {
+            if chunk.len() > merge_size {
+                merge_heap_sections(chunk, merge_size)
+            } else {
+                Ok(())
+            }
+        })?;
     }
-    
+
     Ok(())
 }
 
 fn build_max_heap<T: Ord>(slice: &mut [T]) -> Result<()> {
-    for i in (0..slice.len()/2).rev() {
+    for i in (0..slice.len() / 2).rev() {
         heapify_iterative(slice, i)?;
     }
     Ok(())
@@ -170,18 +174,18 @@ fn build_max_heap<T: Ord>(slice: &mut [T]) -> Result<()> {
 
 fn heapify_iterative<T: Ord>(slice: &mut [T], root: usize) -> Result<()> {
     let len = slice.len();
-    
+
     if root >= len {
         return Err(HeapSortError::InvalidRootIndex { root, len });
     }
-    
+
     let mut current = root;
-    
+
     while current < len {
         let mut largest = current;
         let left = current * 2 + 1;
         let right = left + 1;
-        
+
         if left < len && slice[left] > slice[largest] {
             largest = left;
         }
@@ -196,13 +200,13 @@ fn heapify_iterative<T: Ord>(slice: &mut [T], root: usize) -> Result<()> {
         slice.swap(current, largest);
         current = largest;
     }
-    
+
     Ok(())
 }
 
 #[cfg(feature = "parallel")]
 fn merge_heaps<T: Ord>(slice: &mut [T]) -> Result<()> {
-    for i in (0..slice.len()/2).rev() {
+    for i in (0..slice.len() / 2).rev() {
         heapify_iterative(slice, i)?;
     }
     Ok(())
@@ -213,9 +217,9 @@ fn merge_heap_sections<T: Ord>(slice: &mut [T], mid: usize) -> Result<()> {
     if mid >= slice.len() {
         return Ok(());
     }
-    
+
     // Rebuild heap property for the merged section
-    for i in (0..slice.len()/2).rev() {
+    for i in (0..slice.len() / 2).rev() {
         heapify_iterative(slice, i)?;
     }
     Ok(())
@@ -297,7 +301,7 @@ mod tests {
     fn test_large_array() {
         let size = 100_000; // Reduced from 1_000_000 to a more reasonable size
         validate_array_size(size).expect("Size should be valid");
-        
+
         let mut arr: Vec<i32> = (0..size).rev().map(|x| x as i32).collect();
         let mut expected = arr.clone();
         expected.sort();
@@ -318,19 +322,25 @@ mod tests {
     fn test_heap_property() {
         let mut arr = vec![4, 10, 3, 5, 1];
         build_max_heap(&mut arr).expect("Build heap should succeed");
-        
+
         // Test max-heap property at each level
         for i in 0..arr.len() {
             let left = 2 * i + 1;
             let right = 2 * i + 2;
-            
+
             if left < arr.len() {
-                assert!(arr[i] >= arr[left], 
-                    "Heap property violated at index {} with left child", i);
+                assert!(
+                    arr[i] >= arr[left],
+                    "Heap property violated at index {} with left child",
+                    i
+                );
             }
             if right < arr.len() {
-                assert!(arr[i] >= arr[right], 
-                    "Heap property violated at index {} with right child", i);
+                assert!(
+                    arr[i] >= arr[right],
+                    "Heap property violated at index {} with right child",
+                    i
+                );
             }
         }
     }
@@ -342,28 +352,37 @@ mod tests {
 
         for &size in &sizes {
             let mut arr: Vec<i32> = (0..size).map(|x| x as i32).rev().collect();
-            
+
             // First build the heap and verify heap property
             build_max_heap(&mut arr).expect("Build heap should succeed");
-            
+
             // Verify heap property is maintained after heap construction
             for i in 0..arr.len() {
                 let left = 2 * i + 1;
                 let right = left + 1;
                 if left < arr.len() {
-                    assert!(arr[i] >= arr[left], 
-                        "Heap property violated at index {} with left child", i);
+                    assert!(
+                        arr[i] >= arr[left],
+                        "Heap property violated at index {} with left child",
+                        i
+                    );
                 }
                 if right < arr.len() {
-                    assert!(arr[i] >= arr[right],
-                        "Heap property violated at index {} with right child", i);
+                    assert!(
+                        arr[i] >= arr[right],
+                        "Heap property violated at index {} with right child",
+                        i
+                    );
                 }
             }
 
             // Now complete the sort
             sort(&mut arr).expect("Sort should succeed");
-            assert!(arr.windows(2).all(|w| w[0] <= w[1]),
-                "Array not sorted correctly for size {}", size);
+            assert!(
+                arr.windows(2).all(|w| w[0] <= w[1]),
+                "Array not sorted correctly for size {}",
+                size
+            );
         }
     }
 
@@ -395,7 +414,8 @@ mod tests {
         assert_eq!(arr, expected);
 
         // Saw pattern
-        let mut arr: Vec<i32> = (0..50).map(|x| x as i32)
+        let mut arr: Vec<i32> = (0..50)
+            .map(|x| x as i32)
             .chain((0..50).rev().map(|x| x as i32))
             .collect();
         let mut expected = arr.clone();
@@ -404,7 +424,8 @@ mod tests {
         assert_eq!(arr, expected);
 
         // Pipeline pattern
-        let mut arr: Vec<i32> = (0..50).map(|x| x as i32)
+        let mut arr: Vec<i32> = (0..50)
+            .map(|x| x as i32)
             .chain((0..50).map(|x| x as i32))
             .collect();
         let mut expected = arr.clone();
@@ -428,12 +449,12 @@ mod tests {
         // Only test the validation logic without allocating memory
         let size = (isize::MAX as usize / 2) + 1;
         let result = validate_array_size(size);
-        
+
         assert!(matches!(
             result,
             Err(HeapSortError::ArrayTooLarge(s)) if s == size
         ));
-        
+
         // Test a valid size
         let valid_size = isize::MAX as usize / 4;
         assert!(validate_array_size(valid_size).is_ok());
@@ -444,15 +465,15 @@ mod tests {
         // Test with a reasonable size array
         let size = 10_000; // Reduced from 1_000_000
         let mut arr = vec![1; size];
-        
+
         // Test with valid indices first
         let valid_index = size / 2;
         let result = heapify_iterative(&mut arr, valid_index);
         assert!(result.is_ok(), "Should succeed with valid index");
-        
+
         // Now test with an index that would cause child index overflow
         // We don't need a huge array to test this, just pass a large index
-        let large_index = (usize::MAX - 1) / 2;  // This will cause 2*i+1 to overflow
+        let large_index = (usize::MAX - 1) / 2; // This will cause 2*i+1 to overflow
         let result = heapify_iterative(&mut arr, large_index);
         assert!(result.is_err(), "Should error on large indices");
     }
@@ -463,7 +484,7 @@ mod tests {
         let mut arr = vec![3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5];
         let mut expected = arr.clone();
         expected.sort();
-        
+
         sort_i32(&mut arr).expect("SIMD sort should succeed");
         assert_eq!(arr, expected, "SIMD sort failed to sort correctly");
     }
@@ -475,7 +496,7 @@ mod tests {
         let mut arr: Vec<i32> = (0..size).rev().collect();
         let mut expected = arr.clone();
         expected.sort();
-        
+
         sort_i32(&mut arr).expect("Parallel SIMD sort should succeed");
         assert_eq!(arr, expected, "Parallel SIMD sort failed to sort correctly");
     }
@@ -486,18 +507,20 @@ mod tests {
         let size = 100_000; // Reduced from 1_000_000
         let mut arr1: Vec<i32> = (0..size).rev().collect();
         let mut arr2 = arr1.clone();
-        
+
         let start = std::time::Instant::now();
         sort_i32(&mut arr1).expect("SIMD sort should succeed");
         let simd_time = start.elapsed();
-        
+
         let start = std::time::Instant::now();
         sort(&mut arr2).expect("Regular sort should succeed");
         let regular_time = start.elapsed();
-        
-        println!("Size {}: SIMD sort {:?}, Regular sort {:?}", 
-                size, simd_time, regular_time);
-        
+
+        println!(
+            "Size {}: SIMD sort {:?}, Regular sort {:?}",
+            size, simd_time, regular_time
+        );
+
         assert_eq!(arr1, arr2, "SIMD sort produced different results");
     }
 }
@@ -510,7 +533,7 @@ mod benchmarks {
     fn bench_sort(size: usize) -> Result<Duration> {
         // Add size validation
         validate_array_size(size)?;
-        
+
         let mut arr: Vec<i32> = (0..size).map(|x| x as i32).rev().collect();
         let start = Instant::now();
         sort(&mut arr)?;
@@ -523,15 +546,17 @@ mod benchmarks {
         for &size in &[100, 1_000, 10_000, 100_000] {
             // Our heapsort
             let heap_time = bench_sort(size).expect("Heapsort benchmark should succeed");
-            
+
             // Standard library sort
             let mut arr: Vec<i32> = (0..size).map(|x| x as i32).rev().collect();
             let start = Instant::now();
             arr.sort();
             let std_time = start.elapsed();
 
-            println!("Size {}: Heapsort {:?}, std::sort {:?}", 
-                    size, heap_time, std_time);
+            println!(
+                "Size {}: Heapsort {:?}, std::sort {:?}",
+                size, heap_time, std_time
+            );
         }
     }
 
@@ -542,7 +567,7 @@ mod benchmarks {
         let mut arr: Vec<i32> = (0..size).rev().collect();
         let mut expected = arr.clone();
         expected.sort();
-        
+
         parallel_sort(&mut arr).expect("Parallel sort should succeed");
         assert_eq!(arr, expected, "Parallel sort failed to sort correctly");
     }

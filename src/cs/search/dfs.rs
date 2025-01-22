@@ -1,4 +1,4 @@
-use crate::cs::error::{Result, Error};
+use crate::cs::error::{Error, Result};
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 
@@ -7,6 +7,15 @@ use std::hash::Hash;
 pub struct Graph<T> {
     /// Adjacency list representation of the graph
     edges: HashMap<T, Vec<T>>,
+}
+
+impl<T> Default for Graph<T>
+where
+    T: Eq + Hash + Clone,
+{
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl<T> Graph<T>
@@ -22,12 +31,15 @@ where
 
     /// Adds a vertex to the graph
     pub fn add_vertex(&mut self, vertex: T) {
-        self.edges.entry(vertex).or_insert_with(Vec::new);
+        self.edges.entry(vertex).or_default();
     }
 
     /// Adds a directed edge from source to destination
     pub fn add_edge(&mut self, source: T, destination: T) {
-        self.edges.entry(source.clone()).or_default().push(destination.clone());
+        self.edges
+            .entry(source.clone())
+            .or_default()
+            .push(destination.clone());
         // Ensure the destination vertex exists in the graph
         self.edges.entry(destination).or_default();
     }
@@ -62,7 +74,7 @@ where
 
         let mut visited = HashSet::new();
         let mut path = Vec::new();
-        
+
         if self.dfs_recursive(start, target, &mut visited, &mut path) {
             Ok(Some(path))
         } else {
@@ -87,10 +99,10 @@ where
 
         if let Some(neighbors) = self.edges.get(current) {
             for neighbor in neighbors {
-                if !visited.contains(neighbor) {
-                    if self.dfs_recursive(neighbor, target, visited, path) {
-                        return true;
-                    }
+                if !visited.contains(neighbor)
+                    && self.dfs_recursive(neighbor, target, visited, path)
+                {
+                    return true;
                 }
             }
         }
@@ -124,7 +136,8 @@ where
             }
 
             if let Some(neighbors) = self.edges.get(&current) {
-                for neighbor in neighbors.iter().rev() {  // Reverse to maintain same order as recursive
+                for neighbor in neighbors.iter().rev() {
+                    // Reverse to maintain same order as recursive
                     if !visited.contains(neighbor) {
                         visited.insert(neighbor.clone());
                         let mut new_path = path.clone();
@@ -146,10 +159,7 @@ mod tests {
     #[test]
     fn test_empty_graph() {
         let graph: Graph<i32> = Graph::new();
-        assert!(matches!(
-            graph.search(&1, &2),
-            Err(Error::InvalidInput(_))
-        ));
+        assert!(matches!(graph.search(&1, &2), Err(Error::InvalidInput(_))));
     }
 
     #[test]
@@ -165,7 +175,9 @@ mod tests {
         let mut graph = Graph::new();
         graph.add_edge(1, 2);
         assert!(matches!(graph.search(&1, &2).unwrap(), Some(path) if path == vec![1, 2]));
-        assert!(matches!(graph.search_iterative(&1, &2).unwrap(), Some(path) if path == vec![1, 2]));
+        assert!(
+            matches!(graph.search_iterative(&1, &2).unwrap(), Some(path) if path == vec![1, 2])
+        );
     }
 
     #[test]
@@ -204,7 +216,9 @@ mod tests {
         graph.add_edge(2, 4);
 
         assert!(matches!(graph.search(&1, &4).unwrap(), Some(path) if path == vec![1, 2, 4]));
-        assert!(matches!(graph.search_iterative(&1, &4).unwrap(), Some(path) if path == vec![1, 2, 4]));
+        assert!(
+            matches!(graph.search_iterative(&1, &4).unwrap(), Some(path) if path == vec![1, 2, 4])
+        );
     }
 
     #[test]
@@ -214,8 +228,12 @@ mod tests {
         graph.add_edge("B", "C");
         graph.add_edge("A", "D");
 
-        assert!(matches!(graph.search(&"A", &"C").unwrap(), Some(path) if path == vec!["A", "B", "C"]));
-        assert!(matches!(graph.search_iterative(&"A", &"C").unwrap(), Some(path) if path == vec!["A", "B", "C"]));
+        assert!(
+            matches!(graph.search(&"A", &"C").unwrap(), Some(path) if path == vec!["A", "B", "C"])
+        );
+        assert!(
+            matches!(graph.search_iterative(&"A", &"C").unwrap(), Some(path) if path == vec!["A", "B", "C"])
+        );
     }
 
     #[test]
@@ -233,10 +251,7 @@ mod tests {
         let mut graph = Graph::new();
         graph.add_edge(1, 2);
 
-        assert!(matches!(
-            graph.search(&3, &2),
-            Err(Error::InvalidInput(_))
-        ));
+        assert!(matches!(graph.search(&3, &2), Err(Error::InvalidInput(_))));
         assert!(matches!(
             graph.search_iterative(&3, &2),
             Err(Error::InvalidInput(_))
