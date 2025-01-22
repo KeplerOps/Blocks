@@ -145,6 +145,7 @@ fn parallel_sort<T: Ord + Send>(slice: &mut [T]) -> Result<()> {
 }
 
 #[cfg(feature = "parallel")]
+#[allow(dead_code)]
 fn parallel_merge_heaps<T: Ord + Send>(slice: &mut [T]) -> Result<()> {
     use rayon::prelude::*;
 
@@ -213,6 +214,7 @@ fn merge_heaps<T: Ord>(slice: &mut [T]) -> Result<()> {
 }
 
 #[cfg(feature = "parallel")]
+#[allow(dead_code)]
 fn merge_heap_sections<T: Ord>(slice: &mut [T], mid: usize) -> Result<()> {
     if mid >= slice.len() {
         return Ok(());
@@ -238,6 +240,7 @@ fn extract_from_heap<T: Ord>(slice: &mut [T], _offset: usize) -> Result<()> {
 }
 
 #[cfg(feature = "simd")]
+#[allow(dead_code)]
 fn heapify_simd(slice: &mut [i32], root: usize) -> Result<()> {
     heapify_iterative(slice, root)
 }

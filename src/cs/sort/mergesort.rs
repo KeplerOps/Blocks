@@ -190,7 +190,7 @@ impl MergeSortBuilder {
     }
 
     #[cfg(feature = "parallel")]
-    fn sort_parallel<T>(&self, slice: &mut [T], aux: &mut Vec<T>, depth: usize) -> Result<()>
+    fn sort_parallel<T>(&self, slice: &mut [T], aux: &mut [T], depth: usize) -> Result<()>
     where
         T: Ord + Clone + Send + Sync + 'static,
     {
